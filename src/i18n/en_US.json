@@ -1,0 +1,16 @@
+{
+  "editMindMap": "Edit Mind Map",
+  "labelDisplay": "Label Display",
+  "labelDisplayDescription": "Label display in image block top right corner",
+  "noLabel": "No Label",
+  "showLabelAlways": "Show Label Always",
+  "showLabelOnHover": "Show Label On Hover",
+  "embedImageFormat": "Embed Image Format",
+  "embedImageFormatDescription": "Format of New Mind Map Image",
+  "fullscreenEdit": "Fullscreen Edit",
+  "fullscreenEditDescription": "Edit mind map in fullscreen mode (only for dialog mode)",
+  "editWindow": "Edit Window Mode",
+  "editWindowDescription": "The type of window for editing mind map",
+  "themeMode": "Theme Mode",
+  "themeModeDescription": "Theme of window"
+}

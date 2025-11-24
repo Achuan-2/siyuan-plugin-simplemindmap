@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1,maximum-scale=1,minimum-scale=1">
+    <link rel="icon" href="dist/logo.ico">
+    <title>思维导图</title>
+    <script>
+        // 自定义静态资源的路径
+        window.externalPublicPath = './dist/'
+        // 接管应用
+        window.takeOverApp = true
+    </script>
+    <link href="dist/css/chunk-vendors.css" rel="stylesheet">
+    <link href="dist/css/app.css" rel="stylesheet">
+</head>
+<body>
+    <noscript>
+        <strong>We're sorry but thoughts doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <div id="app"></div>
+    <script>
+        // 从父窗口获取数据
+        const getDataFromParent = () => {
+            return new Promise((resolve, reject) => {
+                // 发送消息给父窗口请求数据
+                window.parent.postMessage(JSON.stringify({
+                    event: 'request_data'
+                }), '*');
+                
+                // 监听父窗口的响应
+                const messageHandler = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        if (message.event === 'init_data') {
+                            window.removeEventListener('message', messageHandler);
+                            resolve({
+                                mindMapData: message.mindMapData || {
+                                    root: {
+                                        data: {
+                                            text: '根节点'
+                                        },
+                                        children: []
+                                    },
+                                    theme: {
+                                        template: 'avocado',
+                                        config: {}
+                                    },
+                                    layout: 'logicalStructure',
+                                    config: {},
+                                    view: null
+                                },
+                                mindMapConfig: message.mindMapConfig || {},
+                                lang: message.lang || 'zh',
+                                localConfig: message.localConfig || null
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Parse message error:', err);
+                    }
+                };
+                
+                window.addEventListener('message', messageHandler);
+                
+                // 超时处理
+                setTimeout(() => {
+                    window.removeEventListener('message', messageHandler);
+                    resolve({
+                        mindMapData: {
+                            root: {
+                                data: {
+                                    text: '根节点'
+                                },
+                                children: []
+                            },
+                            theme: {
+                                template: 'avocado',
+                                config: {}
+                            },
+                            layout: 'logicalStructure',
+                            config: {},
+                            view: null
+                        },
+                        mindMapConfig: {},
+                        lang: 'zh',
+                        localConfig: null
+                    });
+                }, 1000);
+            });
+        };
+        
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        const setTakeOverAppMethods = data => {
+            window.takeOverAppMethods = {};
+            
+            // 获取思维导图数据的函数
+            window.takeOverAppMethods.getMindMapData = () => {
+                return data.mindMapData;
+            };
+            
+            // 保存思维导图数据的函数（带防抖）
+            const saveMindMapDataDebounced = debounce((mindMapData) => {
+                window.parent.postMessage(JSON.stringify({
+                    event: 'save',
+                    data: mindMapData
+                }), '*');
+            }, 500);
+            
+            window.takeOverAppMethods.saveMindMapData = mindMapData => {
+                saveMindMapDataDebounced(mindMapData);
+            };
+            
+            // 获取思维导图配置
+            window.takeOverAppMethods.getMindMapConfig = () => {
+                return data.mindMapConfig;
+            };
+            
+            // 保存思维导图配置
+            window.takeOverAppMethods.saveMindMapConfig = config => {
+                window.parent.postMessage(JSON.stringify({
+                    event: 'save_config',
+                    config: config
+                }), '*');
+            };
+            
+            // 获取语言的函数
+            window.takeOverAppMethods.getLanguage = () => {
+                return data.lang;
+            };
+            
+            // 保存语言的函数
+            window.takeOverAppMethods.saveLanguage = lang => {
+                window.parent.postMessage(JSON.stringify({
+                    event: 'save_language',
+                    lang: lang
+                }), '*');
+            };
+            
+            // 获取本地配置的函数
+            window.takeOverAppMethods.getLocalConfig = () => {
+                return data.localConfig;
+            };
+            
+            // 保存本地配置的函数
+            window.takeOverAppMethods.saveLocalConfig = config => {
+                window.parent.postMessage(JSON.stringify({
+                    event: 'save_local_config',
+                    config: config
+                }), '*');
+            };
+        };
+        
+        window.onload = async () => {
+            if (!window.takeOverApp) return;
+            
+            // 请求数据
+            const data = await getDataFromParent();
+            
+            // 设置全局的方法
+            setTakeOverAppMethods(data);
+            
+            // 手动保存函数（立即保存，不防抖）
+            const manualSave = () => {
+                if (window.mindMapInstance) {
+                    try {
+                        const mindMapData = window.mindMapInstance.getData(true);
+                        window.parent.postMessage(JSON.stringify({
+                            event: 'save',
+                            data: mindMapData
+                        }), '*');
+                    } catch (err) {
+                        console.error('Manual save error:', err);
+                    }
+                }
+            };
+            
+            // 自动保存函数
+            const autoSave = () => {
+                if (window.mindMapInstance) {
+                    try {
+                        const mindMapData = window.mindMapInstance.getData(true);
+                        window.parent.postMessage(JSON.stringify({
+                            event: 'save',
+                            data: mindMapData
+                        }), '*');
+                    } catch (err) {
+                        console.error('Auto save error:', err);
+                    }
+                }
+            };
+            
+            // 思维导图实例创建完成事件
+            window.$bus.$on('app_inited', mindMap => {
+                window.mindMapInstance = mindMap;
+                window.parent.postMessage(JSON.stringify({
+                    event: 'app_inited'
+                }), '*');
+                
+                // 设置自动保存定时器（每 60 秒保存一次）
+                const autoSaveInterval = setInterval(autoSave, 60000);
+                
+                // 保存定时器引用，以便需要时清除
+                window.autoSaveInterval = autoSaveInterval;
+                
+            });
+            
+            // 监听 Ctrl+S 快捷键
+            document.addEventListener('keydown', (event) => {
+                // Ctrl+S 或 Cmd+S (Mac)
+                if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                    event.preventDefault(); // 阻止浏览器默认保存行为
+                    manualSave();
+                }
+            });
+            
+            // 监听来自父窗口的消息
+            window.addEventListener('message', async (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    
+                    if (message.action === 'export_image') {
+                        if (window.mindMapInstance) {
+                            try {
+                                const type = message.type || 'png';
+                                const exportData = await window.mindMapInstance.export(type, false, 'mindmap');
+                                window.parent.postMessage(JSON.stringify({
+                                    event: 'export_success',
+                                    data: exportData,
+                                    callbackId: message.callbackId
+                                }), '*');
+                            } catch (e) {
+                                console.error('Export failed:', e);
+                                window.parent.postMessage(JSON.stringify({
+                                    event: 'export_error',
+                                    error: e.message,
+                                    callbackId: message.callbackId
+                                }), '*');
+                            }
+                        } else {
+                            console.error('mindMapInstance not available');
+                        }
+                    }
+                } catch (err) {
+                    // Ignore parse errors for non-JSON messages
+                    if (err.message && !err.message.includes('JSON')) {
+                        console.error('Message parse error:', err);
+                    }
+                }
+            });
+            
+            // 实例化页面
+            window.initApp();
+            
+            // 页面卸载时清除定时器
+            window.addEventListener('beforeunload', () => {
+                if (window.autoSaveInterval) {
+                    clearInterval(window.autoSaveInterval);
+                }
+            });
+        };
+    </script>
+    <script src="dist/js/chunk-vendors.js"></script>
+    <script src="dist/js/app.js"></script>
+</body>
+</html>

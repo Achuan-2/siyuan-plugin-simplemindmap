@@ -1,0 +1,30 @@
+{
+  "name": "siyuan-embed-mindmap2",
+  "author": "Yuxin Zhao",
+  "url": "https://github.com/YuxinZhaozyx/siyuan-embed-mindmap2",
+  "version": "0.5.5",
+  "minAppVersion": "3.0.0",
+  "disabledInPublish": true,
+  "backends": [
+    "all"
+  ],
+  "frontends": [
+    "all"
+  ],
+  "displayName": {
+    "default": "「Embed Series」Mind Map",
+    "zh_CN": "「嵌入式系列」思维导图"
+  },
+  "description": {
+    "default": "「Embed Series」Create editable Mind Map with simple-mind-map",
+    "zh_CN": "「嵌入式系列」使用 simple-mind-map 创建可编辑的思维导图"
+  },
+  "readme": {
+    "default": "README.md",
+    "zh_CN": "README_zh_CN.md"
+  },
+  "funding": {
+    "custom": []
+  },
+  "keywords": ["mindmap", "思维导图"]
+}
