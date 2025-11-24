@@ -203,7 +203,8 @@
                         }
                         window.parent.postMessage(JSON.stringify({
                             event: 'save',
-                            data: mindMapData
+                            data: mindMapData,
+                            via: 'manual'
                         }), '*');
                     } catch (err) {
                         console.error('Manual save error:', err);
@@ -230,34 +231,7 @@
                 }
             };
 
-            // 自动保存控制：仅在窗口聚焦且可见时运行
-            let __autoSaveInterval = null;
-            const startAutoSave = () => {
-                if (__autoSaveInterval) return;
-                // 只有在窗口聚焦并且文档可见时才启动定时器
-                if (!document.hasFocus() || document.visibilityState !== 'visible') return;
-                __autoSaveInterval = setInterval(autoSave, 60000);
-                // 兼容旧代码中使用的引用
-                window.autoSaveInterval = __autoSaveInterval;
-            };
-            const stopAutoSave = () => {
-                if (__autoSaveInterval) {
-                    clearInterval(__autoSaveInterval);
-                    __autoSaveInterval = null;
-                    window.autoSaveInterval = null;
-                }
-            };
-
-            // 可见性变化处理器（单独命名以便移除监听）
-            const __visibilityHandler = () => {
-                if (document.visibilityState === 'visible') startAutoSave();
-                else stopAutoSave();
-            };
-
-            // 监听 focus/blur/visibility，以便在窗口不活跃时停止自动保存
-            window.addEventListener('focus', startAutoSave);
-            window.addEventListener('blur', stopAutoSave);
-            document.addEventListener('visibilitychange', __visibilityHandler);
+            // 自动保存已取消：不再启动定时保存或监听窗口可见/聚焦状态
             
             // 思维导图实例创建完成事件
             window.$bus.$on('app_inited', mindMap => {
@@ -265,8 +239,7 @@
                 window.parent.postMessage(JSON.stringify({
                     event: 'app_inited'
                 }), '*');
-                // 启动自动保存（仅在窗口聚焦且可见时）
-                startAutoSave();
+                // 自动保存已取消，保留手动保存功能
 
             });
             
@@ -288,7 +261,17 @@
                         if (window.mindMapInstance) {
                             try {
                                 const type = message.type || 'png';
-                                const exportData = await window.mindMapInstance.export(type, false, 'mindmap');
+                                const exportData = await window.mindMapInstance.export(type, false, 'mindmap',false, `* {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+.smm-hover-node{
+  display:none !important;
+  }
+    .smm-expand-btn{
+    display:none !important;}
+        `);
                                 window.parent.postMessage(JSON.stringify({
                                     event: 'export_success',
                                     data: exportData,
@@ -317,14 +300,9 @@
             // 实例化页面
             window.initApp();
             
-            // 页面卸载时清除定时器并移除事件监听器
+            // 页面卸载时清理（自动保存已取消，无需移除相关监听器）
             window.addEventListener('beforeunload', () => {
-                // 停止并清理自动保存
-                try { stopAutoSave(); } catch (e) {}
-                // 移除焦点/可见性监听器
-                try { window.removeEventListener('focus', startAutoSave); } catch (e) {}
-                try { window.removeEventListener('blur', stopAutoSave); } catch (e) {}
-                try { document.removeEventListener('visibilitychange', __visibilityHandler); } catch (e) {}
+                // 自动保存已取消，无需清理定时器或可见性/焦点监听器
             });
         };
     </script>

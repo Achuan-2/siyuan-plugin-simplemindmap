@@ -581,6 +581,14 @@ export default class MindmapPlugin extends Plugin {
               }, (_resp) => {
                 // After saving data, export image
                 postMessage({ action: 'export_image', type: imageInfo.format });
+                // Push a notification to inform user that save succeeded only when it's a manual save (Ctrl+S)
+                try {
+                  if (message && message.via === 'manual') {
+                    fetchPost('/api/notification/pushMsg', { msg: '保存成功', timeout: 7000 }, () => {});
+                  }
+                } catch (e) {
+                  console.error('Push notification error:', e);
+                }
               });
             }
           } catch (err) {
@@ -756,6 +764,14 @@ export default class MindmapPlugin extends Plugin {
           }, (_resp) => {
             // After saving data, export image
             postMessage({ action: 'export_image', type: imageInfo.format });
+            // Push a notification to inform user that save succeeded only when it's a manual save (Ctrl+S)
+            try {
+              if (message && message.via === 'manual') {
+                fetchPost('/api/notification/pushMsg', { msg: '保存成功', timeout: 7000 }, () => {});
+              }
+            } catch (e) {
+              console.error('Push notification error:', e);
+            }
           });
         }
       } catch (err) {
