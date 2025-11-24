@@ -570,11 +570,30 @@ export default class MindmapPlugin extends Plugin {
           }
         }
 
+        const disableTabSwitching = () => {
+          const tabHeaders = document.querySelectorAll('.layout-tab-bar li[data-type="tab-header"]');
+          tabHeaders.forEach((header: HTMLElement) => {
+            header.style.pointerEvents = 'none';
+            header.style.opacity = '0.6';
+          });
+        };
+
+        const enableTabSwitching = () => {
+          const tabHeaders = document.querySelectorAll('.layout-tab-bar li[data-type="tab-header"]');
+          tabHeaders.forEach((header: HTMLElement) => {
+            header.style.pointerEvents = '';
+            header.style.opacity = '';
+          });
+        };
+
         const onSave = (message: any) => {
           // Save mind map data to block attributes
           try {
             const payload = message.data || null;
             if (imageInfo.blockID && payload) {
+              // Disable tab switching during save to prevent SVG dimension errors
+              disableTabSwitching();
+              
               fetchPost('/api/attr/setBlockAttrs', { 
                 id: imageInfo.blockID, 
                 attrs: { 'custom-mindmap': typeof payload === 'string' ? payload : JSON.stringify(payload) } 
@@ -593,6 +612,8 @@ export default class MindmapPlugin extends Plugin {
             }
           } catch (err) {
             console.error('Save error:', err);
+            // Re-enable tab switching even if save fails
+            enableTabSwitching();
           }
         }
 
@@ -611,8 +632,19 @@ export default class MindmapPlugin extends Plugin {
                     that.updateAttrLabel(imageInfo, blockElement);
                   }
                 });
+                // Re-enable tab switching after save is complete (with 300ms delay)
+                setTimeout(() => {
+                  enableTabSwitching();
+                }, 300);
+              }).catch((err) => {
+                console.error('Failed to reload image:', err);
+                // Re-enable tab switching even if reload fails
+                enableTabSwitching();
               });
             });
+          } else {
+            // Re-enable tab switching if no data
+            enableTabSwitching();
           }
         }
 
@@ -753,11 +785,30 @@ export default class MindmapPlugin extends Plugin {
 
 
 
+    const disableTabSwitching = () => {
+      const tabHeaders = document.querySelectorAll('.layout-tab-bar li[data-type="tab-header"]');
+      tabHeaders.forEach((header: HTMLElement) => {
+        header.style.pointerEvents = 'none';
+        header.style.opacity = '0.6';
+      });
+    };
+
+    const enableTabSwitching = () => {
+      const tabHeaders = document.querySelectorAll('.layout-tab-bar li[data-type="tab-header"]');
+      tabHeaders.forEach((header: HTMLElement) => {
+        header.style.pointerEvents = '';
+        header.style.opacity = '';
+      });
+    };
+
     const onSave = (message: any) => {
       // Save mind map data to block attributes
       try {
         const payload = message.data || null;
         if (imageInfo.blockID && payload) {
+          // Disable tab switching during save to prevent SVG dimension errors
+          disableTabSwitching();
+          
           fetchPost('/api/attr/setBlockAttrs', { 
             id: imageInfo.blockID, 
             attrs: { 'custom-mindmap': typeof payload === 'string' ? payload : JSON.stringify(payload) } 
@@ -776,6 +827,8 @@ export default class MindmapPlugin extends Plugin {
         }
       } catch (err) {
         console.error('Save error:', err);
+        // Re-enable tab switching even if save fails
+        enableTabSwitching();
       }
     }
 
@@ -794,8 +847,19 @@ export default class MindmapPlugin extends Plugin {
                 this.updateAttrLabel(imageInfo, blockElement);
               }
             });
+            // Re-enable tab switching after save is complete (with 300ms delay)
+            setTimeout(() => {
+              enableTabSwitching();
+            }, 300);
+          }).catch((err) => {
+            console.error('Failed to reload image:', err);
+            // Re-enable tab switching even if reload fails
+            enableTabSwitching();
           });
         });
+      } else {
+        // Re-enable tab switching if no data
+        enableTabSwitching();
       }
     }
 

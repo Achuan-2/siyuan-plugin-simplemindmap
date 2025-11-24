@@ -192,15 +192,47 @@
             // 设置全局的方法
             setTakeOverAppMethods(data);
             
+            // 禁用标签页切换
+            const disableTabSwitching = () => {
+                try {
+                    const tabHeaders = window.parent.document.querySelectorAll('.layout-tab-bar li[data-type="tab-header"]');
+                    tabHeaders.forEach((header) => {
+                        header.style.pointerEvents = 'none';
+                        header.style.opacity = '0.6';
+                    });
+                } catch (err) {
+                    // 跨域访问可能失败，忽略错误
+                    console.warn('Cannot disable tab switching (cross-origin):', err);
+                }
+            };
+            
+            // 启用标签页切换
+            const enableTabSwitching = () => {
+                try {
+                    const tabHeaders = window.parent.document.querySelectorAll('.layout-tab-bar li[data-type="tab-header"]');
+                    tabHeaders.forEach((header) => {
+                        header.style.pointerEvents = '';
+                        header.style.opacity = '';
+                    });
+                } catch (err) {
+                    // 跨域访问可能失败，忽略错误
+                    console.warn('Cannot enable tab switching (cross-origin):', err);
+                }
+            };
+            
             // 手动保存函数（立即保存，不防抖）
             const manualSave = () => {
                 if (window.mindMapInstance) {
                     try {
+                        // 禁用标签页切换以防止保存过程中SVG尺寸计算错误
+                        disableTabSwitching();
+                        
                         const mindMapData = window.mindMapInstance.getData(true);
                         if (!isValidMindMapData(mindMapData)) {
                             console.warn('Manual save skipped: invalid or empty mindMapData');
                             return;
                         }
+                        
                         window.parent.postMessage(JSON.stringify({
                             event: 'save',
                             data: mindMapData,
@@ -208,6 +240,8 @@
                         }), '*');
                     } catch (err) {
                         console.error('Manual save error:', err);
+                        // 发生错误时也要重新启用标签页切换
+                        enableTabSwitching();
                     }
                 }
             };
@@ -261,7 +295,7 @@
                         if (window.mindMapInstance) {
                             try {
                                 const type = message.type || 'png';
-                                const exportData = await window.mindMapInstance.export(type, false, 'mindmap',false, `* {
+                                const exportData = await window.mindMapInstance.export(type, false, 'mindmap', false, `* {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
@@ -277,6 +311,10 @@
                                     data: exportData,
                                     callbackId: message.callbackId
                                 }), '*');
+                                // 导出成功后延迟300ms再启用标签页切换
+                                setTimeout(() => {
+                                    enableTabSwitching();
+                                }, 300);
                             } catch (e) {
                                 console.error('Export failed:', e);
                                 window.parent.postMessage(JSON.stringify({
@@ -284,9 +322,12 @@
                                     error: e.message,
                                     callbackId: message.callbackId
                                 }), '*');
+                                // 导出失败也要重新启用标签页切换
+                                enableTabSwitching();
                             }
                         } else {
                             console.error('mindMapInstance not available');
+                            enableTabSwitching();
                         }
                     }
                 } catch (err) {
