@@ -12,7 +12,7 @@
 
 **b. 编辑器集成 (Tab 模式)**
 - 更新了 `setupEditTab` 方法,实现与 simple-mind-map web 应用的集成
-- iframe URL 指向 `/plugins/siyuan-embed-mindmap2/mind/index.html`
+- iframe URL 指向 `/plugins/siyuan-embed-mindmap/mind/index.html`
 - 实现了完整的消息通信机制:
   - `request_data`: 从块属性加载思维导图数据
   - `save`: 保存思维导图数据到块属性

@@ -519,7 +519,7 @@ export default class MindmapPlugin extends Plugin {
         const iframeID = unicodeToBase64(`mindmap-edit-tab-${imageInfo.imageURL}`);
         const editTabHTML = `
     <div class="mindmap-edit-tab">
-      <iframe src="/plugins/siyuan-embed-mindmap2/mind/index.html?iframeID=${iframeID}"></iframe>
+      <iframe src="/plugins/siyuan-embed-mindmap/mind/index.html?iframeID=${iframeID}"></iframe>
     </div>`;
         this.element.innerHTML = editTabHTML;
 
@@ -676,7 +676,7 @@ export default class MindmapPlugin extends Plugin {
     <div class="edit-dialog-header resize__move"></div>
     <div class="edit-dialog-container">
       <div class="edit-dialog-editor">
-        <iframe src="/plugins/siyuan-embed-mindmap2/mind/index.html?iframeID=${iframeID}"></iframe>
+        <iframe src="/plugins/siyuan-embed-mindmap/mind/index.html?iframeID=${iframeID}"></iframe>
       </div>
       <div class="fn__hr--b"></div>
     </div>

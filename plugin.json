@@ -1,7 +1,7 @@
 {
-  "name": "siyuan-embed-mindmap2",
+  "name": "siyuan-embed-mindmap",
   "author": "Yuxin Zhao",
-  "url": "https://github.com/YuxinZhaozyx/siyuan-embed-mindmap2",
+  "url": "https://github.com/YuxinZhaozyx/siyuan-embed-mindmap",
   "version": "0.5.5",
   "minAppVersion": "3.0.0",
   "disabledInPublish": true,
