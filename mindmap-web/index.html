@@ -229,6 +229,35 @@
                     }
                 }
             };
+
+            // 自动保存控制：仅在窗口聚焦且可见时运行
+            let __autoSaveInterval = null;
+            const startAutoSave = () => {
+                if (__autoSaveInterval) return;
+                // 只有在窗口聚焦并且文档可见时才启动定时器
+                if (!document.hasFocus() || document.visibilityState !== 'visible') return;
+                __autoSaveInterval = setInterval(autoSave, 60000);
+                // 兼容旧代码中使用的引用
+                window.autoSaveInterval = __autoSaveInterval;
+            };
+            const stopAutoSave = () => {
+                if (__autoSaveInterval) {
+                    clearInterval(__autoSaveInterval);
+                    __autoSaveInterval = null;
+                    window.autoSaveInterval = null;
+                }
+            };
+
+            // 可见性变化处理器（单独命名以便移除监听）
+            const __visibilityHandler = () => {
+                if (document.visibilityState === 'visible') startAutoSave();
+                else stopAutoSave();
+            };
+
+            // 监听 focus/blur/visibility，以便在窗口不活跃时停止自动保存
+            window.addEventListener('focus', startAutoSave);
+            window.addEventListener('blur', stopAutoSave);
+            document.addEventListener('visibilitychange', __visibilityHandler);
             
             // 思维导图实例创建完成事件
             window.$bus.$on('app_inited', mindMap => {
@@ -236,13 +265,9 @@
                 window.parent.postMessage(JSON.stringify({
                     event: 'app_inited'
                 }), '*');
-                
-                // 设置自动保存定时器（每 60 秒保存一次）
-                const autoSaveInterval = setInterval(autoSave, 60000);
-                
-                // 保存定时器引用，以便需要时清除
-                window.autoSaveInterval = autoSaveInterval;
-                
+                // 启动自动保存（仅在窗口聚焦且可见时）
+                startAutoSave();
+
             });
             
             // 监听 Ctrl+S 快捷键
@@ -292,11 +317,14 @@
             // 实例化页面
             window.initApp();
             
-            // 页面卸载时清除定时器
+            // 页面卸载时清除定时器并移除事件监听器
             window.addEventListener('beforeunload', () => {
-                if (window.autoSaveInterval) {
-                    clearInterval(window.autoSaveInterval);
-                }
+                // 停止并清理自动保存
+                try { stopAutoSave(); } catch (e) {}
+                // 移除焦点/可见性监听器
+                try { window.removeEventListener('focus', startAutoSave); } catch (e) {}
+                try { window.removeEventListener('blur', stopAutoSave); } catch (e) {}
+                try { document.removeEventListener('visibilitychange', __visibilityHandler); } catch (e) {}
             });
         };
     </script>
