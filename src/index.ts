@@ -80,12 +80,72 @@ export default class MindmapPlugin extends Plugin {
       }
     });
 
+    // Add edit button on hover for mindmap images
+    let isProcessing = false;
+    document.addEventListener('mouseover', (e) => {
+      const imgContainer = (e.target as HTMLElement).closest('[data-type="img"]') as HTMLElement;
+      if (!imgContainer || isProcessing) return;
+
+      // Check if this image has custom-mindmap attribute
+      const blockElement = imgContainer.closest("div[data-type='NodeParagraph']") as HTMLElement;
+      if (!blockElement || !blockElement.getAttribute("custom-mindmap")) return;
+
+      isProcessing = true;
+      setTimeout(() => isProcessing = false, 100);
+
+      if (imgContainer.querySelector('.cst-edit-mindmap')) return;
+
+      const action = imgContainer.querySelector('.protyle-action');
+      if (!action) return;
+
+      // Adjust original icon style
+      const actionIcon = action.querySelector('.protyle-icon');
+      if (actionIcon) {
+        (actionIcon as HTMLElement).style.borderTopLeftRadius = '0';
+        (actionIcon as HTMLElement).style.borderBottomLeftRadius = '0';
+      }
+
+      // Insert "Edit Mind Map" button
+      const editBtnHtml = `
+        <span class="protyle-icon protyle-icon--only protyle-custom cst-edit-mindmap" 
+              aria-label="编辑思维导图"
+              style="border-top-right-radius:0;border-bottom-right-radius:0;cursor:pointer;">
+          <svg class="svg"><use xlink:href="#iconEdit"></use></svg>
+        </span>`;
+      action.insertAdjacentHTML('afterbegin', editBtnHtml);
+
+      // Bind click event
+      const editBtn = imgContainer.querySelector('.cst-edit-mindmap');
+      editBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const imgElement = imgContainer.querySelector('img');
+        const imgSrc = imgElement?.getAttribute("data-src");
+        const blockID = blockElement.getAttribute("data-node-id");
+        
+        if (imgSrc && blockID) {
+          const originalOpacity = (editBtn as HTMLElement).style.opacity;
+          (editBtn as HTMLElement).style.opacity = "0.5"; // Visual feedback
+          
+          this.getMindmapImageInfo(imgSrc, true).then((imageInfo: MindmapImageInfo) => {
+            if (imageInfo) {
+              if (!this.isMobile && this.data[STORAGE_NAME].editWindow === 'tab') {
+                this.openEditTab(imageInfo, blockID);
+              } else {
+                this.openEditDialog(imageInfo, blockID);
+              }
+            }
+            (editBtn as HTMLElement).style.opacity = originalOpacity;
+          });
+        }
+      });
+    });
+
     this.setupEditTab();
 
     this.protyleSlash = [{
-      filter: ["mindmap", "simple-mind-map", "simple-mindmap"],
+      filter: ["mindmap", "simple-mind-map", "simple-mindmap","思维导图"],
       id: "mindmap",
-      html: `<div class="b3-list-item__first"><svg class="b3-list-item__graphic"><use xlink:href="#iconImage"></use></svg><span class="b3-list-item__text">Mind Map</span></div>`,
+      html: `<div class="b3-list-item__first"><svg class="b3-list-item__graphic"><use xlink:href="#iconImage"></use></svg><span class="b3-list-item__text">MindMap</span></div>`,
       callback: (protyle, nodeElement) => {
         this.newMindmapImage(nodeElement.dataset.nodeId, (imageInfo) => {
           if (!this.isMobile && this.data[STORAGE_NAME].editWindow === 'tab') {
