@@ -1,0 +1,3 @@
+[submodule "mind-map"]
+	path = mind-map
+	url = https://github.com/Achuan-2/mind-map.git
