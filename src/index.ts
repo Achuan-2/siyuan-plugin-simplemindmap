@@ -374,8 +374,17 @@ export default class MindmapPlugin extends Plugin {
           children: []
         },
         theme: {
-          template: 'avocado',
-          config: {}
+          template: 'lemonBubbles',
+          config: {
+            second: {
+              fontSize: 24,
+            },
+            node: {
+              fontSize: 24,
+              borderColor: "#4D4D4D",
+              borderWidth: 2
+            }
+          }
         },
         layout: 'logicalStructure',
         config: {},
