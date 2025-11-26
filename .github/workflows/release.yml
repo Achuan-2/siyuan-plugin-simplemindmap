@@ -59,8 +59,6 @@ jobs:
         run: |
           echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          sed -n '/^## 更新日志/,$p' README_zh_CN.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Release
         uses: ncipollo/release-action@v1
