@@ -372,11 +372,21 @@ export default class MindmapPlugin extends Plugin {
   }
 
   public getPlaceholderImageContent(format: 'svg' | 'png'): string {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="270" height="183"><rect width="100%" height="100%" fill="#ffffff"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="16" fill="#888">MindMap</text></svg>`;
-    const base64 = btoa(unescape(encodeURIComponent(svg)));
-    if (format === 'svg') return `data:image/svg+xml;base64,${base64}`;
-    // Fallback: return svg data URL even for png to ensure a valid data URL is returned
-    return `data:image/svg+xml;base64,${base64}`;
+    if (format === 'png') {
+      // 创建一个简单的透明PNG图片
+      const canvas = document.createElement('canvas');
+      canvas.width = 270;
+      canvas.height = 183;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = 'rgba(255, 255, 255, 0)'; // 透明背景
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/png');
+    } else {
+      // 创建一个简单的SVG图片
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="270" height="183"><rect width="100%" height="100%" fill="transparent"/></svg>`;
+      const base64 = btoa(unescape(encodeURIComponent(svg)));
+      return `data:image/svg+xml;base64,${base64}`;
+    }
   }
 
 
