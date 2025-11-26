@@ -8,8 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       # Checkout
       - name: Checkout
@@ -19,12 +17,12 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
           registry-url: "https://registry.npmjs.org"
 
         # Install pnpm
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         id: pnpm-install
         with:
           version: 8
@@ -54,23 +52,11 @@ jobs:
       - name: Build for production
         run: pnpm build
 
-      - name: Release Info
-        id: release_info
-        run: |
-          echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          name: ${{  steps.release_info.outputs.tag_name }}
-          tag: ${{ github.ref }}
           allowUpdates: true
           artifactErrorsFailBuild: true
           artifacts: "package.zip"
           token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
           prerelease: false
-          generateReleaseNotes: true
-          body: ${{ steps.release_info.outputs.changelog }}
-
