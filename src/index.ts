@@ -147,7 +147,7 @@ export default class MindmapPlugin extends Plugin {
       id: "mindmap",
       html: `<div class="b3-list-item__first"><svg class="b3-list-item__graphic"><use xlink:href="#iconImage"></use></svg><span class="b3-list-item__text">MindMap</span></div>`,
       callback: (protyle, nodeElement) => {
-        this.newMindmapImage(nodeElement.dataset.nodeId, (imageInfo) => {
+        this.newMindmapImage(protyle, nodeElement.dataset.nodeId, (imageInfo) => {
           if (!this.isMobile && this.data[STORAGE_NAME].editWindow === 'tab') {
             this.openEditTab(imageInfo, nodeElement.dataset.nodeId);
           } else {
@@ -408,7 +408,7 @@ export default class MindmapPlugin extends Plugin {
 
 
 
-  public async newMindmapImage(blockID: string, callback?: (imageInfo: MindmapImageInfo) => void) {
+  public async newMindmapImage(protyle, blockID: string, callback?: (imageInfo: MindmapImageInfo) => void) {
     const format = this.data[STORAGE_NAME].embedImageFormat;
     const imageName = `mindmap-image-${window.Lute.NewNodeID()}.${format}`;
     const placeholderImageContent = this.getPlaceholderImageContent(format);
@@ -420,11 +420,7 @@ export default class MindmapPlugin extends Plugin {
     formData.append('isDir', 'false');
     await fetchSyncPost('/api/file/putFile', formData);
     const imageURL = `assets/${imageName}`;
-    await fetchSyncPost('/api/block/updateBlock', {
-      id: blockID,
-      data: `![](${imageURL})`,
-      dataType: "markdown",
-    });
+    protyle.insert(`![](${imageURL})`);
       // 初始化空思维导图到块属性
       const initial = {
         root: {
