@@ -415,6 +415,9 @@ export default class MindmapPlugin extends Plugin {
         theme: {
           template: 'lemonBubbles',
           config: {
+            imgMaxWidth: 350,
+            // 图片显示的最大高度
+            imgMaxHeight: 200,
             root: {
               shape: "rectangle"
             },
