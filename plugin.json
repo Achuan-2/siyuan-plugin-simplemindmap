@@ -12,8 +12,8 @@
     "all"
   ],
   "displayName": {
-    "default": "Mind Map",
-    "zh_CN": "思维导图"
+    "default": "Simple MindMap",
+    "zh_CN": "思绪思维导图"
   },
   "description": {
     "default": "Create editable Mind Map with simple-mind-map",
