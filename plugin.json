@@ -1,7 +1,7 @@
 {
-  "name": "siyuan-embed-mindmap",
+  "name": "siyuan-plugin-simplemindmap",
   "author": "Achuan-2",
-  "url": "https://github.com/Achuan-2/siyuan-embed-mindmap",
+  "url": "https://github.com/Achuan-2/siyuan-plugin-simplemindmap",
   "version": "1.1.3",
   "minAppVersion": "3.0.0",
   "disabledInPublish": true,
@@ -12,12 +12,12 @@
     "all"
   ],
   "displayName": {
-    "default": "「Mind Map",
+    "default": "Mind Map",
     "zh_CN": "思维导图"
   },
   "description": {
-    "default": "「Create editable Mind Map with simple-mind-map",
-    "zh_CN": "使用 simple-mind-map 创建可编辑的思维导图"
+    "default": "Create editable Mind Map with simple-mind-map",
+    "zh_CN": "使用 Simple Mindmap 创建可编辑的思维导图"
   },
   "readme": {
     "default": "README.md",
