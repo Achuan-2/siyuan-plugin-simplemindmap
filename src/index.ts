@@ -767,12 +767,17 @@ export default class MindmapPlugin extends Plugin {
 
     const dialogDestroyCallbacks = [];
 
+    // 用于在关闭窗口时触发保存
+    let triggerSaveOnClose = () => {};
+
     const dialog = new Dialog({
       content: editDialogHTML,
       width: this.isMobile ? "92vw" : "90vw",
       height: "80vh",
       hideCloseIcon: this.isMobile,
       destroyCallback: () => {
+        // 关闭窗口时先触发保存
+        triggerSaveOnClose();
         dialogDestroyCallbacks.forEach(callback => callback());
       },
     });
@@ -783,6 +788,11 @@ export default class MindmapPlugin extends Plugin {
     const postMessage = (message: any) => {
       if (!iframe.contentWindow) return;
       iframe.contentWindow.postMessage(JSON.stringify(message), '*');
+    };
+
+    // 设置关闭时触发保存的回调
+    triggerSaveOnClose = () => {
+      postMessage({ action: 'save', via: 'close' });
     };
 
     // 在 simple-mind-map 中，我们通过块属性保存/读取思维导图 JSON
