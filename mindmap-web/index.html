@@ -328,6 +328,12 @@
                 try {
                     const message = JSON.parse(event.data);
                     
+                    // 监听保存成功的消息
+                    if (message.event === 'save_confirmed') {
+                        // 触发 save_success 事件，让 Count 组件更新保存时间
+                        window.$bus.$emit('save_success');
+                    }
+                    
                     if (message.action === 'export_image') {
                         if (window.mindMapInstance) {
                             try {

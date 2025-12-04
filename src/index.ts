@@ -762,6 +762,8 @@ export default class MindmapPlugin extends Plugin {
                 });
                 // After saving data, export image
                 postMessage({ action: 'export_image', type: imageInfo.format });
+                // Notify iframe that save succeeded, so it can trigger save_success event
+                postMessage({ event: 'save_confirmed' });
                 // Push a notification to inform user that save succeeded only when it's a manual save (Ctrl+S)
                 try {
                   if (message && message.via === 'manual') {
@@ -965,6 +967,8 @@ export default class MindmapPlugin extends Plugin {
             });
             // After saving data, export image
             postMessage({ action: 'export_image', type: imageInfo.format });
+            // Notify iframe that save succeeded, so it can trigger save_success event
+            postMessage({ event: 'save_confirmed' });
             // Push a notification to inform user that save succeeded only when it's a manual save (Ctrl+S)
             try {
               if (message && message.via === 'manual') {
