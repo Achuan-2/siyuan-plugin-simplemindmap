@@ -1,6 +1,6 @@
 ## 📖 使用
 
-输入 `/mindmap`​或`/脑图`​或`/思绪思维导图`,创建图片并打开思维导图编辑器，编辑完成后点击保存即可。
+输入 `/mindmap`​或`/脑图`​或`/思绪思维导图`,会自动创建图片并打开思维导图编辑器，编辑完成后，按Ctrl+S会自动保存为图片格式（SVG/PNG），支持二次编辑。
 
 <img alt="image" src="https://fastly.jsdelivr.net/gh/Achuan-2/PicBed@pic/assets/network-asset-b6f2eee6-7954-4ecf-a53a-b19174ce0d30-20251204205852-56pdg0z.png" style="width: 1906px;" />
 

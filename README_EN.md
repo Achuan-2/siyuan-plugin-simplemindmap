@@ -1,6 +1,6 @@
 ## 📖 Usage
 
-Type `/mindmap` to create an image and open the mind map editor. Click save when you're done editing.
+Type `/mindmap` or `/simple-mindmap` to create an image and open the mind map editor. Press Ctrl+S to automatically save the image in SVG/PNG format, supporting re-editing.
 
 <img alt="image" src="https://fastly.jsdelivr.net/gh/Achuan-2/PicBed@pic/assets/network-asset-b6f2eee6-7954-4ecf-a53a-b19174ce0d30-20251204205852-56pdg0z.png" style="width: 1906px;" />
 
