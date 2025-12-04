@@ -16,11 +16,11 @@
     "zh_CN": "思绪思维导图"
   },
   "description": {
-    "default": "Create editable Mind Map with simple-mind-map",
+    "default": "Create editable Mind Map with Simple Mindmap",
     "zh_CN": "使用 Simple Mindmap 创建可编辑的思维导图"
   },
   "readme": {
-    "default": "README.md",
+    "default": "README_EN.md",
     "zh_CN": "README.md"
   },
   "funding": {
