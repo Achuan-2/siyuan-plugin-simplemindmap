@@ -1039,6 +1039,18 @@ export default class MindmapPlugin extends Plugin {
           else if (message.event == 'exit') {
             onExit(message);
           }
+          else if (message.event == 'get_block_setting') {
+            // 获取块设置
+            this.getBlockSetting(imageInfo.blockID, postMessage);
+          }
+          else if (message.event == 'save_block_setting') {
+            // 保存块设置
+            this.saveBlockSetting(imageInfo.blockID, message.settings);
+          }
+          else if (message.event == 'get_current_doc_id') {
+            // 获取当前文档ID
+            this.getCurrentDocId(imageInfo.blockID, postMessage);
+          }
         }
         catch (err) {
           console.error(err);
@@ -1111,5 +1123,61 @@ export default class MindmapPlugin extends Plugin {
       }
     }
     return imageDataURL;
+  }
+
+  // 获取块设置（笔记转导图功能）
+  private async getBlockSetting(blockID: string, postMessage: (message: any) => void) {
+    if (!blockID) {
+      postMessage({ event: 'block_setting_response', settings: null });
+      return;
+    }
+    try {
+      const resp = await fetchSyncPost('/api/attr/getBlockAttrs', { id: blockID });
+      let settings = null;
+      if (resp && resp.data && resp.data['custom-mindmap-blocksetting']) {
+        try {
+          settings = JSON.parse(resp.data['custom-mindmap-blocksetting']);
+        } catch (e) { settings = null; }
+      }
+      postMessage({ event: 'block_setting_response', settings: settings });
+    } catch (err) {
+      console.error('Get block setting error:', err);
+      postMessage({ event: 'block_setting_response', settings: null });
+    }
+  }
+
+  // 保存块设置（笔记转导图功能）
+  private async saveBlockSetting(blockID: string, settings: any) {
+    if (!blockID || !settings) return;
+    try {
+      await fetchSyncPost('/api/attr/setBlockAttrs', {
+        id: blockID,
+        attrs: { 'custom-mindmap-blocksetting': JSON.stringify(settings) }
+      });
+    } catch (err) {
+      console.error('Save block setting error:', err);
+    }
+  }
+
+  // 获取当前文档ID（笔记转导图功能）
+  private async getCurrentDocId(blockID: string, postMessage: (message: any) => void) {
+    if (!blockID) {
+      postMessage({ event: 'current_doc_id_response', docId: null });
+      return;
+    }
+    try {
+      // 通过SQL查询获取块所在的文档ID
+      const resp = await fetchSyncPost('/api/query/sql', {
+        stmt: `SELECT root_id FROM blocks WHERE id = '${blockID}'`
+      });
+      if (resp && resp.code === 0 && resp.data && resp.data.length > 0) {
+        postMessage({ event: 'current_doc_id_response', docId: resp.data[0].root_id });
+      } else {
+        postMessage({ event: 'current_doc_id_response', docId: null });
+      }
+    } catch (err) {
+      console.error('Get current doc id error:', err);
+      postMessage({ event: 'current_doc_id_response', docId: null });
+    }
   }
 }
