@@ -721,10 +721,17 @@ export default class MindmapPlugin extends Plugin {
                   mindMapData = JSON.parse(resp.data['custom-mindmap']);
                 } catch (e) { mindMapData = null; }
               }
+              // 从 custom-mindmap-setting 中读取配置（包含彩虹线条、水印等配置）
+              let mindMapConfig = {};
+              if (resp && resp.data && resp.data['custom-mindmap-setting']) {
+                try {
+                  mindMapConfig = JSON.parse(resp.data['custom-mindmap-setting']);
+                } catch (e) { mindMapConfig = {}; }
+              }
               postMessage({
                 event: 'init_data',
                 mindMapData: mindMapData,
-                mindMapConfig: {},
+                mindMapConfig: mindMapConfig,
                 lang: window.siyuan.config.lang.split('_')[0] || 'zh',
                 localConfig: null
               });
@@ -782,6 +789,22 @@ export default class MindmapPlugin extends Plugin {
           } catch (err) {
             console.error('Save error:', err);
             // Re-enable tab switching even if save fails
+          }
+        }
+
+        const onSaveConfig = async (message: any) => {
+          // 保存思维导图配置（如彩虹线条、水印等配置）到块属性的 custom-mindmap-setting 中
+          try {
+            const config = message.config || null;
+            if (imageInfo.blockID && config) {
+              // 直接保存配置到 custom-mindmap-setting
+              await fetchSyncPost('/api/attr/setBlockAttrs', { 
+                id: imageInfo.blockID, 
+                attrs: { 'custom-mindmap-setting': JSON.stringify(config) } 
+              });
+            }
+          } catch (err) {
+            console.error('Save config error:', err);
           }
         }
 
@@ -851,6 +874,10 @@ export default class MindmapPlugin extends Plugin {
               }
               else if (message.event == 'hover_block_link') {
                 onHoverBlockLink(message);
+              }
+              else if (message.event == 'save_config') {
+                // 保存思维导图配置（彩虹线条等）到块属性
+                onSaveConfig(message);
               }
             }
             catch (err) {
@@ -943,10 +970,17 @@ export default class MindmapPlugin extends Plugin {
               mindMapData = JSON.parse(resp.data['custom-mindmap']);
             } catch (e) { mindMapData = null; }
           }
+          // 从 custom-mindmap-setting 中读取配置（包含彩虹线条、水印等配置）
+          let mindMapConfig = {};
+          if (resp && resp.data && resp.data['custom-mindmap-setting']) {
+            try {
+              mindMapConfig = JSON.parse(resp.data['custom-mindmap-setting']);
+            } catch (e) { mindMapConfig = {}; }
+          }
           postMessage({
             event: 'init_data',
             mindMapData: mindMapData,
-            mindMapConfig: {},
+            mindMapConfig: mindMapConfig,
             lang: window.siyuan.config.lang.split('_')[0] || 'zh',
             localConfig: null
           });
@@ -1005,6 +1039,22 @@ export default class MindmapPlugin extends Plugin {
       } catch (err) {
         console.error('Save error:', err);
         // Re-enable tab switching even if save fails
+      }
+    }
+
+    const onSaveConfig = async (message: any) => {
+      // 保存思维导图配置（如彩虹线条、水印等配置）到块属性的 custom-mindmap-setting 中
+      try {
+        const config = message.config || null;
+        if (imageInfo.blockID && config) {
+          // 直接保存配置到 custom-mindmap-setting
+          await fetchSyncPost('/api/attr/setBlockAttrs', { 
+            id: imageInfo.blockID, 
+            attrs: { 'custom-mindmap-setting': JSON.stringify(config) } 
+          });
+        }
+      } catch (err) {
+        console.error('Save config error:', err);
       }
     }
 
@@ -1086,6 +1136,10 @@ export default class MindmapPlugin extends Plugin {
           }
           else if (message.event == 'hover_block_link') {
             onHoverBlockLink(message);
+          }
+          else if (message.event == 'save_config') {
+            // 保存思维导图配置（彩虹线条等）到块属性
+            onSaveConfig(message);
           }
         }
         catch (err) {
