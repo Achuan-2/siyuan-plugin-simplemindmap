@@ -312,6 +312,73 @@
                 }), '*');
                 // 自动保存已取消，保留手动保存功能
 
+                // 思源笔记块链接悬浮预览功能
+                // 监听超链接悬浮，检测 siyuan://blocks/xxx 格式的链接
+                const siyuanBlockLinkRegex = /^siyuan:\/\/blocks\/([0-9a-zA-Z-]+)$/;
+                let hoverTimeout = null;
+                
+                document.addEventListener('mouseover', (e) => {
+                    // 查找 a 标签（支持 HTML 和 SVG 中的 a 元素）
+                    const linkElement = e.target.closest('a');
+                    if (!linkElement) return;
+                    
+                    // 获取 href 属性（SVG 中可能是 xlink:href 或 href）
+                    const href = linkElement.getAttribute('href') || 
+                                 linkElement.getAttribute('xlink:href') ||
+                                 linkElement.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+                    if (!href) return;
+                    
+                    // 检查是否是思源块链接
+                    if (!href.startsWith('siyuan://blocks/')) return;
+                    
+                    const match = href.match(siyuanBlockLinkRegex);
+                    if (!match) return;
+                    
+                    const blockId = match[1];
+                    
+                    // 获取链接元素相对于视口的位置
+                    const rect = linkElement.getBoundingClientRect();
+                    // 获取 iframe 相对于父窗口的位置
+                    let iframeOffsetX = 0;
+                    let iframeOffsetY = 0;
+                    try {
+                        const iframeRect = window.frameElement?.getBoundingClientRect();
+                        if (iframeRect) {
+                            iframeOffsetX = iframeRect.left;
+                            iframeOffsetY = iframeRect.top;
+                        }
+                    } catch (err) {
+                        // 跨域访问可能失败
+                    }
+                    
+                    // 清除之前的定时器
+                    if (hoverTimeout) {
+                        clearTimeout(hoverTimeout);
+                    }
+                    
+                    // 延迟一点时间再显示悬浮预览，避免快速划过时频繁触发
+                    hoverTimeout = setTimeout(() => {
+                        window.parent.postMessage(JSON.stringify({
+                            event: 'hover_block_link',
+                            blockId: blockId,
+                            x: rect.left + iframeOffsetX,
+                            y: rect.bottom + iframeOffsetY
+                        }), '*');
+                    }, 300);
+                });
+                
+                // 鼠标离开时清除定时器
+                document.addEventListener('mouseout', (e) => {
+                    const linkElement = e.target.closest('a');
+                    if (!linkElement) return;
+                    const href = linkElement.getAttribute('href') || 
+                                 linkElement.getAttribute('xlink:href') ||
+                                 linkElement.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+                    if (href && href.startsWith('siyuan://blocks/') && hoverTimeout) {
+                        clearTimeout(hoverTimeout);
+                        hoverTimeout = null;
+                    }
+                });
             });
             
             // 监听 Ctrl+S 快捷键

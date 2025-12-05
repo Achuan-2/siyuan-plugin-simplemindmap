@@ -812,6 +812,21 @@ export default class MindmapPlugin extends Plugin {
           this.tab.close();
         }
 
+        // 处理块链接悬浮预览
+        const onHoverBlockLink = (message: any) => {
+          const blockId = message.blockId;
+          const x = message.x;
+          const y = message.y;
+          if (blockId) {
+            that.addFloatLayer({
+              refDefs: [{ refID: blockId, defIDs: [] }],
+              x: x,
+              y: y - 70,
+              isBacklink: false
+            });
+          }
+        }
+
         const messageEventHandler = (event) => {
           if (!((event.source.location.href as string).includes(`iframeID=${iframeID}`))) return;
           if (event.data) {
@@ -833,6 +848,9 @@ export default class MindmapPlugin extends Plugin {
               }
               else if (message.event == 'exit') {
                 onExit(message);
+              }
+              else if (message.event == 'hover_block_link') {
+                onHoverBlockLink(message);
               }
             }
             catch (err) {
@@ -1017,6 +1035,21 @@ export default class MindmapPlugin extends Plugin {
       dialog.destroy();
     }
 
+    // 处理块链接悬浮预览
+    const onHoverBlockLink = (message: any) => {
+      const blockId = message.blockId;
+      const x = message.x;
+      const y = message.y;
+      if (blockId) {
+        this.addFloatLayer({
+          refDefs: [{ refID: blockId, defIDs: [] }],
+          x: x,
+          y: y - 70,
+          isBacklink: false
+        });
+      }
+    }
+
     const messageEventHandler = (event) => {
       if (!((event.source.location.href as string).includes(`iframeID=${iframeID}`))) return;
       if (event.data) {
@@ -1050,6 +1083,9 @@ export default class MindmapPlugin extends Plugin {
           else if (message.event == 'get_current_doc_id') {
             // 获取当前文档ID
             this.getCurrentDocId(imageInfo.blockID, postMessage);
+          }
+          else if (message.event == 'hover_block_link') {
+            onHoverBlockLink(message);
           }
         }
         catch (err) {
