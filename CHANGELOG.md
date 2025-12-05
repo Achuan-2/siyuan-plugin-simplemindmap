@@ -1,12 +1,17 @@
-## v1.4.0 / 20241205
+
+## v1.5.0 / 20251205
+- 🎨 支持设置是否启用彩虹线条 [#38](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/38)
+- 🎨彩虹线条和导图设置保存在块属性里[#36](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/36) [#28](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/28)
+- 🎨 dialog模式支持在新标签打开
+## v1.4.0 / 20251205
 - 🎨节点块链接如果是思源块链接支持悬浮预览思源内容 [#30](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/30)
 
 
-## v1.3.0 / 20241205
+## v1.3.0 / 20251205
 
 - ✨笔记转导图功能 [#29](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/29)
 
-## v1.2.0 / 20241204
+## v1.2.0 / 20251204
 
 - 🎨插件改名siyuan-plugin-simplemindmap
 - 🎨改进svg导出，dom隐藏也能正确导出，参考了drawnix
