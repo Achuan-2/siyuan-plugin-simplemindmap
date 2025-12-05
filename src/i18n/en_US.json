@@ -18,5 +18,6 @@
   "themeConfig": "Theme Custom Config",
   "themeConfigDescription": "Custom theme config for new mind maps (JSON format), see <a href='https://wanglin2.github.io/mind-map-docs/course/course10.html#%E4%B8%BB%E9%A2%98' target='_blank'>Theme Documentation</a>",
   "defaultRainbowLines": "Default Rainbow Lines",
-  "defaultRainbowLinesDescription": "Default rainbow lines style for new mind maps"
+  "defaultRainbowLinesDescription": "Default rainbow lines style for new mind maps",
+  "openInTab": "Open in Tab"
 }

@@ -1108,7 +1108,12 @@ export default class MindmapPlugin extends Plugin {
     if (blockID) imageInfo.blockID = blockID;
     const editDialogHTML = `
   <div class="mindmap-edit-dialog">
-    <div class="edit-dialog-header resize__move"></div>
+    <div class="edit-dialog-header resize__move">
+      ${!this.isMobile ? `<button class="b3-button b3-button--outline fn__size200 open-in-tab-btn" style="position: absolute; right: 50px; top: 2px; padding: 2px 8px; font-size: 12px;">
+        <svg class="b3-button__icon"><use xlink:href="#iconLayoutRight"></use></svg>
+        <span>${this.i18n.openInTab || '在标签页中打开'}</span>
+      </button>` : ''}
+    </div>
     <div class="edit-dialog-container">
       <div class="edit-dialog-editor">
         <iframe src="/plugins/siyuan-plugin-simplemindmap/mind/index.html?iframeID=${iframeID}"></iframe>
@@ -1122,6 +1127,8 @@ export default class MindmapPlugin extends Plugin {
 
     // 用于在关闭窗口时触发保存
     let triggerSaveOnClose = () => {};
+    // 标记是否通过"在标签页中打开"按钮关闭
+    let openingInTab = false;
 
     const dialog = new Dialog({
       content: editDialogHTML,
@@ -1129,11 +1136,23 @@ export default class MindmapPlugin extends Plugin {
       height: "80vh",
       hideCloseIcon: this.isMobile,
       destroyCallback: () => {
-        // 关闭窗口时先触发保存
-        triggerSaveOnClose();
+        // 如果是通过"在标签页中打开"按钮关闭，不触发保存（会在 Tab 中继续编辑）
+        if (!openingInTab) {
+          triggerSaveOnClose();
+        }
         dialogDestroyCallbacks.forEach(callback => callback());
       },
     });
+
+    // 绑定"在标签页中打开"按钮事件
+    const openInTabBtn = dialog.element.querySelector(".open-in-tab-btn");
+    if (openInTabBtn) {
+      openInTabBtn.addEventListener("click", () => {
+        openingInTab = true;
+        dialog.destroy();
+        this.openEditTab(imageInfo, blockID);
+      });
+    }
 
     const iframe = dialog.element.querySelector("iframe");
     iframe.focus();

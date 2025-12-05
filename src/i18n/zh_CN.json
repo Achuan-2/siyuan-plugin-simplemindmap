@@ -18,5 +18,6 @@
   "themeConfig": "主题自定义配置",
   "themeConfigDescription": "新建思维导图时使用的主题自定义配置（JSON格式），详见<a href='https://wanglin2.github.io/mind-map-docs/course/course10.html#%E4%B8%BB%E9%A2%98' target='_blank'>主题文档</a>",
   "defaultRainbowLines": "默认彩虹线条",
-  "defaultRainbowLinesDescription": "新建思维导图时默认使用的彩虹线条样式"
+  "defaultRainbowLinesDescription": "新建思维导图时默认使用的彩虹线条样式",
+  "openInTab": "在标签页中打开"
 }

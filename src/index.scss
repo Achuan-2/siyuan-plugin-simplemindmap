@@ -10,6 +10,17 @@
         height: 24px;
         flex-shrink: 0;
         cursor: grab;
+        position: relative;
+
+        .open-in-tab-btn {
+            cursor: pointer;
+            height: 20px;
+            line-height: 1;
+            
+            &:hover {
+                background-color: var(--b3-theme-primary-lightest);
+            }
+        }
     }
 
     .edit-dialog-container {
