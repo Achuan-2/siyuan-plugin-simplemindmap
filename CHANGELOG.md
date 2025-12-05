@@ -1,3 +1,7 @@
+## v1.4.0 / 20241205
+- 🎨节点块链接如果是思源块链接支持悬浮预览思源内容 [#30](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/30)
+
+
 ## v1.3.0 / 20241205
 
 - ✨笔记转导图功能 [#29](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/29)
