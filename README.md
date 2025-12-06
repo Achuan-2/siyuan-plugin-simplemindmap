@@ -52,7 +52,7 @@
 
 <img alt="思维导图悬浮预览" src="https://fastly.jsdelivr.net/gh/Achuan-2/PicBed@pic/assets/%E6%80%9D%E7%BB%B4%E5%AF%BC%E5%9B%BE%E6%82%AC%E6%B5%AE%E9%A2%84%E8%A7%88-20251205103903-64rv9e5.gif" />
 
-## 2.4 支持文档树内容显示
+### 2.4 支持文档树内容显示
 
 
 笔记转导图功能支持输入笔记本id或者文档id，获取子文档树结构
