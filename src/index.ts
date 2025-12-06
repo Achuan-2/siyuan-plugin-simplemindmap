@@ -64,6 +64,9 @@ export default class MindmapPlugin extends Plugin {
   public EDIT_TAB_TYPE = "mindmap-edit-tab";
 
   async onload() {
+    // 添加自定义思维导图图标
+    this.addIcons(`<symbol id="iconSimpleMindmap" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M640 138.666667c-53.717333 0-98.986667 36.096-112.896 85.333333H469.333333A160 160 0 0 0 309.333333 384v10.666667H256a117.333333 117.333333 0 1 0 0 234.666666h53.333333V640A160 160 0 0 0 469.333333 800h57.770667a117.376 117.376 0 0 0 112.896 85.333333h128a117.333333 117.333333 0 1 0 0-234.666666h-128c-53.717333 0-98.986667 36.096-112.896 85.333333H469.333333A96 96 0 0 1 373.333333 640v-10.666667H384a117.333333 117.333333 0 1 0 0-234.666666h-10.666667V384A96 96 0 0 1 469.333333 288h57.770667a117.376 117.376 0 0 0 112.896 85.333333h128a117.333333 117.333333 0 1 0 0-234.666666h-128zM586.666667 256c0-29.44 23.893333-53.333333 53.333333-53.333333h128a53.333333 53.333333 0 1 1 0 106.666666h-128c-29.44 0-53.333333-23.893333-53.333333-53.333333z m-384 256c0-29.44 23.893333-53.333333 53.333333-53.333333h128a53.333333 53.333333 0 1 1 0 106.666666H256c-29.44 0-53.333333-23.893333-53.333333-53.333333z m384 256c0-29.44 23.893333-53.333333 53.333333-53.333333h128a53.333333 53.333333 0 1 1 0 106.666666h-128c-29.44 0-53.333333-23.893333-53.333333-53.333333z" fill="currentColor"></path></symbol>`);
+    
     this.initMetaInfo();
     this.initSetting();
 
@@ -94,39 +97,23 @@ export default class MindmapPlugin extends Plugin {
       isProcessing = true;
       setTimeout(() => isProcessing = false, 100);
 
-      if (imgContainer.querySelector('.cst-edit-mindmap')) return;
-
-      const action = imgContainer.querySelector('.protyle-action');
+      const action = imgContainer.querySelector('.protyle-action') as HTMLElement;
       if (!action) return;
 
-      // Adjust original icon style
-      const actionIcon = action.querySelector('.protyle-icon');
-      if (actionIcon) {
-        (actionIcon as HTMLElement).style.borderTopLeftRadius = '0';
-        (actionIcon as HTMLElement).style.borderBottomLeftRadius = '0';
-      }
+      // Check if edit button already exists
+      if (action.querySelector('.cst-edit-mindmap')) return;
 
-      // Insert "Edit Mind Map" button
-      const editBtnHtml = `
-        <span class="protyle-icon protyle-icon--only protyle-custom cst-edit-mindmap" 
-              aria-label="编辑思维导图"
-              style="border-top-right-radius:0;border-bottom-right-radius:0;cursor:pointer;">
-          <svg class="svg"><use xlink:href="#iconEdit"></use></svg>
-        </span>`;
-      action.insertAdjacentHTML('afterbegin', editBtnHtml);
+      const imgElement = imgContainer.querySelector('img');
+      const imgSrc = imgElement?.getAttribute("data-src");
+      const blockID = blockElement.getAttribute("data-node-id");
 
-      // Bind click event
-      const editBtn = imgContainer.querySelector('.cst-edit-mindmap');
-      editBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const imgElement = imgContainer.querySelector('img');
-        const imgSrc = imgElement?.getAttribute("data-src");
-        const blockID = blockElement.getAttribute("data-node-id");
+      // Create edit button element
+      const editBtnElement = HTMLToElement(`<span aria-label="编辑思维导图" data-position="4north" class="ariaLabel protyle-icon cst-edit-mindmap"><svg><use xlink:href="#iconSimpleMindmap"></use></svg></span>`);
+      editBtnElement.addEventListener("click", async (event: PointerEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
         
         if (imgSrc && blockID) {
-          const originalOpacity = (editBtn as HTMLElement).style.opacity;
-          (editBtn as HTMLElement).style.opacity = "0.5"; // Visual feedback
-          
           this.getMindmapImageInfo(imgSrc, true).then((imageInfo: MindmapImageInfo) => {
             if (imageInfo) {
               if (!this.isMobile && this.data[STORAGE_NAME].editWindow === 'tab') {
@@ -135,10 +122,27 @@ export default class MindmapPlugin extends Plugin {
                 this.openEditDialog(imageInfo, blockID);
               }
             }
-            (editBtn as HTMLElement).style.opacity = originalOpacity;
           });
         }
       });
+
+      // Insert button and adjust styles
+      action.insertAdjacentElement('afterbegin', editBtnElement);
+      
+      // Reset all button styles
+      for (const child of action.children) {
+        child.classList.toggle('protyle-icon--only', false);
+        child.classList.toggle('protyle-icon--first', false);
+        child.classList.toggle('protyle-icon--last', false);
+      }
+      
+      // Apply appropriate styles based on button count
+      if (action.children.length == 1) {
+        action.firstElementChild.classList.toggle('protyle-icon--only', true);
+      } else if (action.children.length > 1) {
+        action.firstElementChild.classList.toggle('protyle-icon--first', true);
+        action.lastElementChild.classList.toggle('protyle-icon--last', true);
+      }
     };
     document.addEventListener('mouseover', this._mouseoverHandler);
 
@@ -815,7 +819,7 @@ export default class MindmapPlugin extends Plugin {
         if (imageInfo) {
           window.siyuan.menus.menu.addItem({
             id: "edit-mindmap",
-            icon: 'iconEdit',
+            icon: 'iconSimpleMindmap',
             label: `思维导图编辑`,
             index: 1,
             click: () => {
@@ -1096,7 +1100,7 @@ export default class MindmapPlugin extends Plugin {
       app: this.app,
       custom: {
         id: this.name + this.EDIT_TAB_TYPE,
-        icon: "iconEdit",
+        icon: "iconSimpleMindmap",
         title: `${imageInfo.imageURL.split('/').pop()}`,
         data: imageInfo,
       }
