@@ -1083,19 +1083,47 @@ export default class MindmapPlugin extends Plugin {
         
         if (message.event === 'request_data') {
           // iframe 请求数据 - 可编辑但不自动保存
+          let themeConfig: any = {};
+          try {
+            const raw = this.data[STORAGE_NAME] && this.data[STORAGE_NAME].themeConfig;
+            if (raw && typeof raw === 'string' && raw.trim()) {
+              themeConfig = JSON.parse(raw);
+            } else if (raw && typeof raw === 'object') {
+              themeConfig = raw;
+            } else {
+              themeConfig = this.DEFAULT_THEME_CONFIG || {};
+            }
+          } catch (e) {
+            themeConfig = this.DEFAULT_THEME_CONFIG || {};
+          }
+
+          // 获取彩虹线条配置
+          let rainbowLinesConfig: { open: boolean; colorsList?: string[] } = { open: false };
+          const defaultRainbowLines = this.data[STORAGE_NAME].defaultRainbowLines || 'none';
+          if (defaultRainbowLines !== 'none') {
+            const rainbowOption = this.RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
+            if (rainbowOption && rainbowOption.list) {
+              rainbowLinesConfig = {
+                open: true,
+                colorsList: rainbowOption.list
+              };
+            }
+          }
+
           iframe.contentWindow.postMessage(JSON.stringify({
             event: 'init_data',
             mindMapData: {
               root: mindmapData,
               theme: {
                 template: this.data[STORAGE_NAME].defaultTheme || 'lemonBubbles',
-                config: {}
+                config: themeConfig
               },
               layout: 'logicalStructure',
               config: {},
               view: null
             },
             mindMapConfig: {
+              rainbowLinesConfig: rainbowLinesConfig
               // 移除 readonly 限制，允许编辑
             },
             lang: window.siyuan.config.lang === 'zh_CN' ? 'zh' : 'en',
@@ -1442,19 +1470,47 @@ export default class MindmapPlugin extends Plugin {
             if (!message) return;
             
             if (message.event === 'request_data') {
+              let themeConfig: any = {};
+              try {
+                const raw = that.data[STORAGE_NAME] && that.data[STORAGE_NAME].themeConfig;
+                if (raw && typeof raw === 'string' && raw.trim()) {
+                  themeConfig = JSON.parse(raw);
+                } else if (raw && typeof raw === 'object') {
+                  themeConfig = raw;
+                } else {
+                  themeConfig = that.DEFAULT_THEME_CONFIG || {};
+                }
+              } catch (e) {
+                themeConfig = that.DEFAULT_THEME_CONFIG || {};
+              }
+
+              // 获取彩虹线条配置
+              let rainbowLinesConfig: { open: boolean; colorsList?: string[] } = { open: false };
+              const defaultRainbowLines = that.data[STORAGE_NAME].defaultRainbowLines || 'none';
+              if (defaultRainbowLines !== 'none') {
+                const rainbowOption = that.RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
+                if (rainbowOption && rainbowOption.list) {
+                  rainbowLinesConfig = {
+                    open: true,
+                    colorsList: rainbowOption.list
+                  };
+                }
+              }
+
               postMessage({
                 event: 'init_data',
                 mindMapData: {
                   root: mindmapData,
                   theme: {
                     template: that.data[STORAGE_NAME].defaultTheme || 'lemonBubbles',
-                    config: {}
+                    config: themeConfig
                   },
                   layout: 'logicalStructure',
                   config: {},
                   view: null
                 },
                 mindMapConfig: {
+                  rainbowLinesConfig: rainbowLinesConfig
                   // 可编辑但不自动保存
                 },
                 lang: window.siyuan.config.lang === 'zh_CN' ? 'zh' : 'en',
