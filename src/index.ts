@@ -1409,6 +1409,22 @@ export default class MindmapPlugin extends Plugin {
               else if (message.event == 'exit') {
                 onExit(message);
               }
+              else if (message.event == 'get_block_setting') {
+                // 获取块设置
+                that.getBlockSetting(imageInfo.blockID, postMessage);
+              }
+              else if (message.event == 'save_block_setting') {
+                // 保存块设置
+                that.saveBlockSetting(imageInfo.blockID, message.settings);
+              }
+              else if (message.event == 'get_current_doc_id') {
+                // 获取当前文档ID
+                that.getCurrentDocId(imageInfo.blockID, postMessage);
+              }
+              else if (message.event == 'get_current_image_url') {
+                // 获取当前思维导图的图片URL
+                postMessage({ event: 'current_image_url_response', imageUrl: imageInfo.imageURL });
+              }
               else if (message.event == 'hover_block_link') {
                 onHoverBlockLink(message);
               }
