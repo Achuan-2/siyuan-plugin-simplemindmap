@@ -1195,7 +1195,8 @@ export default class MindmapPlugin extends Plugin {
             mindMapData: mindMapData,
             mindMapConfig: mindMapConfig,
             lang: window.siyuan.config.lang.split('_')[0] || 'zh',
-            localConfig: null
+            localConfig: null,
+            imageUrl: imageInfo.imageURL
           });
         } catch (err) {
           postMessage({
@@ -1203,7 +1204,8 @@ export default class MindmapPlugin extends Plugin {
             mindMapData: null,
             mindMapConfig: {},
             lang: window.siyuan.config.lang.split('_')[0] || 'zh',
-            localConfig: null
+            localConfig: null,
+            imageUrl: imageInfo.imageURL
           });
         }
       } else {
@@ -1212,7 +1214,8 @@ export default class MindmapPlugin extends Plugin {
           mindMapData: null,
           mindMapConfig: {},
           lang: window.siyuan.config.lang.split('_')[0] || 'zh',
-          localConfig: null
+          localConfig: null,
+          imageUrl: imageInfo.imageURL
         });
       }
     }
@@ -1346,6 +1349,10 @@ export default class MindmapPlugin extends Plugin {
           else if (message.event == 'get_current_doc_id') {
             // 获取当前文档ID
             this.getCurrentDocId(imageInfo.blockID, postMessage);
+          }
+          else if (message.event == 'get_current_image_url') {
+            // 获取当前思维导图的图片URL
+            postMessage({ event: 'current_image_url_response', imageUrl: imageInfo.imageURL });
           }
           else if (message.event == 'hover_block_link') {
             onHoverBlockLink(message);
