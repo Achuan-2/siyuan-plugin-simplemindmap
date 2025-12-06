@@ -1,4 +1,10 @@
 
+## v1.6.1 / 20251206
+
+- 🎨Markdown解析优化 [#40](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/40)
+  - 列表的段落层级优化
+  - 段落里出现多个块引优化
+
 ## v1.6.0 /20251206
 
 - ✨行内样式支持超链接 [#20](https://github.com/Achuan-2/siyuan-plugin-simplemindmap/issues/20)
