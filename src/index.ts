@@ -736,6 +736,7 @@ export default class MindmapPlugin extends Plugin {
           template: defaultTheme,
           config: themeConfig
         },
+        smmVersion: "0.14.0-fix.1",
         layout: 'logicalStructure',
         config: {},
         view: null
@@ -1002,11 +1003,14 @@ export default class MindmapPlugin extends Plugin {
 
       return nodes.map((n) => {
         const text = n.name || '文档';
+        const url = n.id ? `siyuan://blocks/${n.id}` : '';
+        
+        // 使用行内链接格式，而不是节点链接
         const node = {
           data: {
-            text,
-            hyperlink: n.id ? `siyuan://blocks/${n.id}` : undefined,
-            hyperlinkTitle: text
+            text: url ? `<p><a href="${url}" rel="noopener noreferrer" target="_blank">${text}</a></p>` : text,
+            richText: true
+
           },
           children: []
         };
@@ -1118,6 +1122,7 @@ export default class MindmapPlugin extends Plugin {
                 template: this.data[STORAGE_NAME].defaultTheme || 'lemonBubbles',
                 config: themeConfig
               },
+              smmVersion: "0.14.0-fix.1",
               layout: 'logicalStructure',
               config: {},
               view: null
@@ -1521,6 +1526,7 @@ export default class MindmapPlugin extends Plugin {
                     template: that.data[STORAGE_NAME].defaultTheme || 'lemonBubbles',
                     config: themeConfig
                   },
+                  smmVersion: "0.14.0-fix.1",
                   layout: 'logicalStructure',
                   config: {},
                   view: null
