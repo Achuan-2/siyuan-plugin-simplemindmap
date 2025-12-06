@@ -1,4 +1,7 @@
 
+## v1.7.0 / 20251206
+- 🎨笔记转导图支持子文档转思维导图  [#42](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/42)
+
 ## v1.6.1 / 20251206
 
 - 🎨Markdown解析优化 [#40](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/40)
