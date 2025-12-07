@@ -1,13 +1,14 @@
-这是一款思源笔记的思维导图插件，特点是支持自动保存思维导图为图片并支持图片二次编辑。此外，还支持导图与块绑定获取笔记内容，支持文档大纲、文档内容、文档树转导图
+插件地址：[Achuan-2/siyuan-plugin-simplemindmap](https://github.com/Achuan-2/siyuan-plugin-simplemindmap)
+
+插件简介：这是一款思源笔记的思维导图插件，特点是支持自动保存思维导图为图片并支持图片二次编辑。此外，还支持导图与块绑定获取笔记内容，支持文档大纲、文档内容、文档树转导图
 
 ## 1 📖 基本使用
 
-输入 `/mindmap`或 `/脑图`或 `/思绪思维导图`，创建图片并打开思维导图编辑器，编辑完成后点击保存即可。
+输入 `/mindmap`或 `/脑图`或 `/思绪思维导图`，选择「思绪思维导图」，会自动创建图片并打开思维导图编辑器，编辑完成后点击保存即可。保存的图片之后右键还能继续编辑。
 
-<img alt="image" src="https://fastly.jsdelivr.net/gh/Achuan-2/PicBed@pic/assets/network-asset-b6f2eee6-7954-4ecf-a53a-b19174ce0d30-20251204205852-56pdg0z.png" style="width: 1906px;" />
+![](https://fastly.jsdelivr.net/gh/Achuan-2/PicBed/assets/20251207122605-2025-12-07.png)
 
-<img alt="image" src="https://fastly.jsdelivr.net/gh/Achuan-2/PicBed@pic/assets/network-asset-4bd6dc62-5425-4f5d-92da-f250d4b2acd8-20251204205949-w7j1nie.png" />
-
+![](https://fastly.jsdelivr.net/gh/Achuan-2/PicBed/assets/20251207122625-2025-12-07.png)
 > ⚠️ **使用注意**
 > 目前图片支持二次编辑是通过自定义块属性写入思维导图数据实现的，如果自定义块属性被删除或者修改，可能会导致思维导图数据丢失，无法二次编辑。
 
