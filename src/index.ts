@@ -26,7 +26,7 @@ import {
 } from "./utils";
 import { matchHotKey } from "./utils/hotkey";
 import defaultImageContent from "@/default.json";
-import { importOutline } from "../mind-map/web/src/utils/noteImport";
+import { importOutline, importDocTree } from "../mind-map/web/src/utils/noteImport";
 
 let PluginInfo = {
   version: '',
@@ -941,7 +941,7 @@ export default class MindmapPlugin extends Plugin {
 
       // 生成思维导图数据
       const rootDocId = isNotebook ? null : element.getAttribute("data-node-id");
-      const mindmapData = await this.generateDocTreeMindmap(notebookId, startPath, 0, sortMode, rootName, rootDocId);
+      const mindmapData = await importDocTree(notebookId, startPath, 0, sortMode, rootName, rootDocId);
 
       // 准备块设置信息
       const blockSettings = {
@@ -1066,7 +1066,7 @@ export default class MindmapPlugin extends Plugin {
       }
 
       // 生成思维导图数据
-      const mindmapData = await this.generateDocTreeMindmap(notebookId, startPath, 0, sortMode, rootName, docId);
+      const mindmapData = await importDocTree(notebookId, startPath, 0, sortMode, rootName, docId);
 
       const blockSettings = {
         blockId: docId,
@@ -1156,89 +1156,6 @@ export default class MindmapPlugin extends Plugin {
         width: "400px",
       });
     }
-  }
-
-  private async generateDocTreeMindmap(notebookId: string, startPath: string, maxLevel: number, sortMode: number, rootName: string, rootDocId?: string) {
-    // 递归获取文档树
-    const getDocTree = async (currentPath: string, currentLevel: number = 1): Promise<any[]> => {
-      if (maxLevel > 0 && currentLevel > maxLevel) return [];
-
-      try {
-        const res = await fetchSyncPost('/api/filetree/listDocsByPath', {
-          notebook: notebookId,
-          path: currentPath,
-          sort: sortMode,
-          showHidden: false,
-          maxListCount: 1000
-        });
-
-        if (!res || res.code !== 0 || !res.data || !res.data.files) {
-          return [];
-        }
-
-        const docPromises = res.data.files.map(async (file) => {
-          const node = {
-            name: (file.name || '').replace(/\.sy$/i, ''),
-            id: file.id,
-            path: (file.path || '').replace(/\.sy$/i, ''),
-            children: []
-          };
-
-          if (file.subFileCount > 0) {
-            const childPath = node.path || currentPath;
-            node.children = await getDocTree(childPath, currentLevel + 1);
-          }
-          return node;
-        });
-
-        return await Promise.all(docPromises);
-      } catch (error) {
-        console.error(`处理路径 [${currentPath}] 时发生错误:`, error);
-        return [];
-      }
-    };
-
-    const tree = await getDocTree(startPath);
-
-    // 转换为思维导图格式
-    const convert = (nodes: any[], currentLevel: number = 1) => {
-      if (!nodes || nodes.length === 0) return [];
-      if (maxLevel > 0 && currentLevel > maxLevel) return [];
-
-      return nodes.map((n) => {
-        const text = n.name || '文档';
-        const url = n.id ? `siyuan://blocks/${n.id}` : '';
-        
-        // 使用行内链接格式，而不是节点链接
-        const node = {
-          data: {
-            text: url ? `<p><a href="${url}" rel="noopener noreferrer" target="_blank">${text}</a></p>` : text,
-            richText: true
-
-          },
-          children: []
-        };
-
-        if (n.children && n.children.length > 0) {
-          node.children = convert(n.children, currentLevel + 1);
-        }
-
-        return node;
-      });
-    };
-
-    // 根节点：如果是文档，添加行内链接；如果是笔记本，使用纯文本
-    const root = {
-      data: rootDocId ? {
-        richText: true,
-        text: `<p><a href="siyuan://blocks/${rootDocId}" rel="noopener noreferrer" target="_blank">${rootName || '文档树'}</a></p>`
-      } : {
-        text: rootName || '文档树'
-      },
-      children: convert(tree, 1)
-    };
-
-    return root;
   }
 
   private openTempMindmapDialog(mindmapData: any, blockSettings?: any) {
