@@ -153,7 +153,7 @@ export default class MindmapPlugin extends Plugin {
     this.setupEditTab();
 
     this.protyleSlash = [{
-      filter: ["mindmap", "simple-mind-map", "simple-mindmap","思绪思维导图","脑图","naotu","siweidaotu"],
+      filter: ["mindmap", "simple-mindmap", "simplemindmap","思绪思维导图","脑图","naotu","sixusiweidaotu"],
       id: "simplemindmap",
       html: `<div class="b3-list-item__first"><svg class="b3-list-item__graphic"><use xlink:href="#iconImage"></use></svg><span class="b3-list-item__text">思绪思维导图</span></div>`,
       callback: (protyle, nodeElement) => {
