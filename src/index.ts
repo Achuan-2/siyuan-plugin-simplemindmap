@@ -26,6 +26,7 @@ import {
 } from "./utils";
 import { matchHotKey } from "./utils/hotkey";
 import defaultImageContent from "@/default.json";
+import { importOutline } from "../mind-map/web/src/utils/noteImport";
 
 let PluginInfo = {
   version: '',
@@ -60,6 +61,7 @@ export default class MindmapPlugin extends Plugin {
   private _globalKeyDownHandler;
   private _mouseoverHandler;
   private _openMenuDoctreeHandler;
+  private _clickEditorTitleIconHandler;
 
   private settingItems: SettingItem[];
   public EDIT_TAB_TYPE = "mindmap-edit-tab";
@@ -171,6 +173,9 @@ export default class MindmapPlugin extends Plugin {
     this._openMenuDoctreeHandler = this.openMenuDoctreeHandler.bind(this);
     this.eventBus.on("open-menu-doctree", this._openMenuDoctreeHandler);
 
+    this._clickEditorTitleIconHandler = this.handleDocumentMenu.bind(this);
+    this.eventBus.on('click-editortitleicon', this._clickEditorTitleIconHandler);
+
     this._globalKeyDownHandler = this.globalKeyDownHandler.bind(this);
     document.documentElement.addEventListener("keydown", this._globalKeyDownHandler);
 
@@ -181,6 +186,7 @@ export default class MindmapPlugin extends Plugin {
     if (this._mutationObserver) this._mutationObserver.disconnect();
     if (this._openMenuImageHandler) this.eventBus.off("open-menu-image", this._openMenuImageHandler);
     if (this._openMenuDoctreeHandler) this.eventBus.off("open-menu-doctree", this._openMenuDoctreeHandler);
+    if (this._clickEditorTitleIconHandler) this.eventBus.off('click-editortitleicon', this._clickEditorTitleIconHandler);
     if (this._globalKeyDownHandler) document.documentElement.removeEventListener("keydown", this._globalKeyDownHandler);
     if (this._mouseoverHandler) document.removeEventListener('mouseover', this._mouseoverHandler);
     this.reloadAllEditor();
@@ -848,18 +854,36 @@ export default class MindmapPlugin extends Plugin {
 
     const element = elements[0];
     const isNotebook = element.getAttribute("data-type") === "navigation-root";
-    const isParentDoc = !isNotebook && parseInt(element.getAttribute("data-count")) > 0;
+    const countAttr = parseInt(element.getAttribute("data-count") || '0');
+    const isParentDoc = !isNotebook && countAttr > 0;
+    const isDoc = !isNotebook;
 
-    if (!isNotebook && !isParentDoc) return;
+    // 如果既不是笔记本也不是父文档也不是文档，则不显示菜单
+    if (!isNotebook  && !isDoc) return;
 
-    // 添加菜单项
-    detail.menu.addItem({
-      icon: "iconSimpleMindmap",
-      label: this.i18n.docTreeToMindmap || "子文档转导图",
-      click: () => {
-        this.showDocTreeMindmap(element, isNotebook);
-      }
-    });
+    // 笔记本或父文档：子文档转导图
+    if (isNotebook || isParentDoc) {
+      detail.menu.addItem({
+        icon: "iconSimpleMindmap",
+        label: this.i18n.docTreeToMindmap || "子文档转导图",
+        click: () => {
+          this.showDocTreeMindmap(element, isNotebook);
+        }
+      });
+    }
+
+    // 任何文档（包含父文档与叶子文档）均支持文档大纲转导图
+    if (!isNotebook) {
+      detail.menu.addItem({
+        icon: "iconSimpleMindmap",
+        label: this.i18n.docOutlineToMindmap || "思绪：文档大纲转导图",
+        click: () => {
+          const docId = element.getAttribute('data-node-id');
+          console.log('Show doc outline mindmap for docId:', docId);
+          this.showDocOutlineMindmap(docId);
+        }
+      });
+    }
   }
 
   private async showDocTreeMindmap(element: HTMLElement, isNotebook: boolean) {
@@ -947,6 +971,185 @@ export default class MindmapPlugin extends Plugin {
       console.error('生成文档树思维导图失败:', error);
       loadingDialog.destroy();
       
+      new Dialog({
+        title: "错误",
+        content: `<div class="b3-dialog__content">${error.message || '生成失败'}</div>`,
+        width: "400px",
+      });
+    }
+  }
+
+  // 为文档块标（标题图标）添加菜单项（文档大纲转导图）
+  private handleDocumentMenu({ detail }) {
+    try {
+      const menu = detail?.menu;
+      if (!menu) return;
+
+      // 仅使用 detail.protyle.block.rootID 作为文档 ID
+      let docId = null;
+      try {
+        docId = detail.protyle.block.rootID;
+      } catch (e) { /* ignore */ }
+
+      // 添加菜单项
+      menu.addItem({
+        icon: 'iconSimpleMindmap',
+        label: this.i18n.docTreeToMindmap || '子文档转导图',
+        click: () => {
+          const idToUse = docId;
+          if (idToUse) {
+            this.showDocTreeMindmapByDocId(idToUse);
+          } else {
+            new Dialog({ title: '错误', content: `<div class="b3-dialog__content">无法获取到文档 ID</div>`, width: '360px' });
+          }
+        }
+      });
+
+      // 文档大纲转导图
+      menu.addItem({
+        icon: 'iconSimpleMindmap',
+        label: this.i18n.docOutlineToMindmap || '思绪：文档大纲转导图',
+        click: () => {
+          const idToUse = docId;
+          if (idToUse) {
+            this.showDocOutlineMindmap(idToUse);
+          } else {
+            new Dialog({ title: '错误', content: `<div class="b3-dialog__content">无法获取到文档 ID</div>`, width: '360px' });
+          }
+        }
+      });
+    } catch (err) {
+      console.error('handleDocumentMenu error:', err);
+    }
+  }
+
+  // 通过文档 id 打开文档树转导图（用于文档标题菜单）
+  private async showDocTreeMindmapByDocId(docId: string) {
+    const loadingDialog = new Dialog({
+      title: this.i18n.docTreeToMindmap || "子文档转导图",
+      content: `<div class="b3-dialog__content" style="text-align: center; padding: 40px;">
+        <div class="fn__loading"><svg class="fn__rotate"><use xlink:href="#iconLoading"></use></svg></div>
+        <div style="margin-top: 16px;">正在生成思维导图...</div>
+      </div>`,
+      width: "400px",
+    });
+
+    try {
+      if (!docId) throw new Error('无法获取文档 ID');
+
+      // 获取文档信息以确定所在笔记本和路径
+      const blockRes = await fetchSyncPost('/api/query/sql', {
+        stmt: `SELECT box, path, content FROM blocks WHERE id = '${docId}'`
+      });
+
+      if (!blockRes || blockRes.code !== 0 || !blockRes.data || blockRes.data.length === 0) {
+        throw new Error('无法获取文档信息');
+      }
+
+      const blockInfo = blockRes.data[0];
+      const notebookId = blockInfo.box;
+      const startPath = (blockInfo.path || '').replace(/\.sy$/, '');
+      const rootName = blockInfo.content || '文档';
+
+      // 获取排序模式
+      let sortMode = 15;
+      try {
+        const confRes = await fetchSyncPost('/api/notebook/getNotebookConf', { notebook: notebookId });
+        if (confRes && confRes.code === 0 && confRes.data && confRes.data.conf) {
+          sortMode = confRes.data.conf.sortMode;
+          if (sortMode === 15) {
+            sortMode = (window as any)?.siyuan?.config?.fileTree?.sort || 15;
+          }
+        }
+      } catch (e) {
+        console.warn('获取排序模式失败，使用默认值', e);
+      }
+
+      // 生成思维导图数据
+      const mindmapData = await this.generateDocTreeMindmap(notebookId, startPath, 0, sortMode, rootName, docId);
+
+      const blockSettings = {
+        blockId: docId,
+        importType: 'docTree',
+        autoNumber: false,
+        maxLevel: 0,
+        autoRefresh: false,
+        isNotebook: false,
+        notebookId: notebookId,
+        startPath: startPath,
+        rootName: rootName
+      };
+
+      loadingDialog.destroy();
+
+      if (!this.isMobile && this.data[STORAGE_NAME].editWindow === 'tab') {
+        this.openTempMindmapTab(mindmapData, rootName, blockSettings);
+      } else {
+        this.openTempMindmapDialog(mindmapData, blockSettings);
+      }
+    } catch (error) {
+      console.error('生成文档树思维导图失败:', error);
+      loadingDialog.destroy();
+      new Dialog({ title: '错误', content: `<div class="b3-dialog__content">${error.message || '生成失败'}</div>`, width: '400px' });
+    }
+  }
+
+  // 将文档大纲导入为思维导图并展示（单文档大纲）
+  // 参数：docId - 文档的 block id
+  private async showDocOutlineMindmap(docId: string) {
+    const loadingDialog = new Dialog({
+      title: this.i18n.docOutlineToMindmap || "文档大纲转导图",
+      content: `<div class="b3-dialog__content" style="text-align: center; padding: 40px;">
+        <div class="fn__loading"><svg class="fn__rotate"><use xlink:href="#iconLoading"></use></svg></div>
+        <div style="margin-top: 16px;">正在生成文档大纲思维导图...</div>
+      </div>`,
+      width: "400px",
+    });
+
+    try {
+      if (!docId) throw new Error('无法获取文档 ID');
+
+      // 获取文档基本信息
+      const blockRes = await fetchSyncPost('/api/query/sql', {
+        stmt: `SELECT box, path, content, name FROM blocks WHERE id = '${docId}'`
+      });
+
+      if (!blockRes || blockRes.code !== 0 || !blockRes.data || blockRes.data.length === 0) {
+        throw new Error("无法获取文档信息");
+      }
+
+      const blockInfo = blockRes.data[0];
+
+      // 使用 noteImport.importOutline 来构建大纲导图数据
+      let root: any = null;
+      try {
+        root = await importOutline(docId, blockInfo, 0);
+      } catch (e) {
+        throw new Error("无法获取文档大纲内容");
+      }
+
+      const plainTitle = (blockInfo.content || blockInfo.name || '文档').replace(/<[^>]+>/g, '').trim();
+
+      const blockSettings = {
+        blockId: docId,
+        importType: 'outline',
+        autoNumber: false,
+        maxLevel: 0,
+        autoRefresh: false,
+        isNotebook: false
+      };
+
+      loadingDialog.destroy();
+
+      if (!this.isMobile && this.data[STORAGE_NAME].editWindow === 'tab') {
+        this.openTempMindmapTab(root, plainTitle, blockSettings);
+      } else {
+        this.openTempMindmapDialog(root, blockSettings);
+      }
+
+    } catch (error) {
+      console.error('生成文档大纲思维导图失败:', error);
+      loadingDialog.destroy();
       new Dialog({
         title: "错误",
         content: `<div class="b3-dialog__content">${error.message || '生成失败'}</div>`,
