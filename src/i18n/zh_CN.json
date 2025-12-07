@@ -20,7 +20,7 @@
   "defaultRainbowLines": "默认彩虹线条",
   "defaultRainbowLinesDescription": "新建思维导图时默认使用的彩虹线条样式",
   "globalMindmapSetting": "全局思维导图设置",
-  "globalMindmapSettingDescription": "全局默认的思维导图配置（JSON格式），优先级低于块属性设置，可以从设置好的导图块的mindmap-setting属性获取",
+  "globalMindmapSettingDescription": "全局默认的思维导图配置（JSON格式），可配置水印、性能模式等选项，优先级低于块属性设置，可以从设置好的导图块的mindmap-setting属性获取",
   "openInTab": "在标签页中打开",
   "docTreeToMindmap": "思绪：子文档转导图",
   "tempMindmapTip": "临时预览模式：可以编辑但不会自动保存，请使用导出功能保存您的修改"
