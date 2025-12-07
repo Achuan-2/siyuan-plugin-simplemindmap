@@ -9,8 +9,7 @@
 ![](https://fastly.jsdelivr.net/gh/Achuan-2/PicBed/assets/20251207122605-2025-12-07.png)
 
 ![](https://fastly.jsdelivr.net/gh/Achuan-2/PicBed/assets/20251207122625-2025-12-07.png)
-> ⚠️ **使用注意**
-> 目前图片支持二次编辑是通过自定义块属性写入思维导图数据实现的，如果自定义块属性被删除或者修改，可能会导致思维导图数据丢失，无法二次编辑。
+
 
 > ❓**为什么不直接保存思维导图文件而选择每次编辑自动保存为图片呢？**
 >
@@ -107,6 +106,14 @@
 
 ![](https://fastly.jsdelivr.net/gh/Achuan-2/PicBed/assets/20251207114229-2025-12-07.png)
 
+## 2.6 导出的图片可再导入
+
+思维导图导出为png、svg图片时，思维导图数据会自动写入图片的元数据中，之后可以直接把图片再导入为思维导图进行编辑
+
+**插件如何识别图片是思维导图图片**：
+
+- 把图片粘贴进思源笔记，激活右键菜单，就会自动识别图片是否为思维导图图片，如果是的话，会出现「编辑思维导图」按钮
+
 ## 3 ⚙️ 插件设置概览
 
 可配置
@@ -118,6 +125,14 @@
 
 ![](https://fastly.jsdelivr.net/gh/Achuan-2/PicBed/assets/20251207101930-2025-12-07.png)
 
+
+## 4 📝插件会创建的自定义属性
+
+插件创建的导图块会添加自定义属性
+- `custom-mindmap-image`: bool, 标记该块是思维导图图片块
+- `custom-mindmap-setting`: json，存储思维导图的设置数据
+- `custom-mindmap-rainbowlinesconfig`: json，存储彩虹线条的配置数据
+
 ## 4 📦 开发
 
 如何打包插件：
@@ -126,6 +141,8 @@
 cd mind-map/web && npm run build
 cd ../.. && npm run build
 ```
+
+
 
 ## 5 ❤️致谢
 
