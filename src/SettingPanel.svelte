@@ -234,7 +234,7 @@
                     value: settings.themeConfig,
                     type: 'textarea',
                     title: '主题配置',
-                    description: '自定义主题配置（JSON格式）',
+                    description: `自定义主题配置（JSON格式）具体见<a href="https://wanglin2.github.io/mind-map-docs/course/course10.html">主题文档</a>`,
                     direction: 'row',
                     rows: 10,
                     placeholder: '输入JSON格式的主题配置'
