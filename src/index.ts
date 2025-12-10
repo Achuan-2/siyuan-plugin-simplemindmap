@@ -285,24 +285,34 @@ export default class MindmapPlugin extends Plugin {
       
       // 验证并保存主题配置
       const themeConfigValue = (dialog.element.querySelector("[data-type='themeConfig']") as HTMLTextAreaElement).value;
-      try {
-        JSON.parse(themeConfigValue); // 验证JSON格式
-        this.data[STORAGE_NAME].themeConfig = themeConfigValue;
-      } catch (e) {
-        // JSON格式错误时使用默认配置
-        console.warn('Theme config JSON parse error, using default config');
-        this.data[STORAGE_NAME].themeConfig = JSON.stringify(this.DEFAULT_THEME_CONFIG, null, 2);
+      if (themeConfigValue.trim() === '') {
+        // 允许用户保存空字符串
+        this.data[STORAGE_NAME].themeConfig = '';
+      } else {
+        try {
+          JSON.parse(themeConfigValue); // 验证JSON格式
+          this.data[STORAGE_NAME].themeConfig = themeConfigValue;
+        } catch (e) {
+          // JSON格式错误时使用默认配置
+          console.warn('Theme config JSON parse error, using default config');
+          this.data[STORAGE_NAME].themeConfig = JSON.stringify(this.DEFAULT_THEME_CONFIG, null, 2);
+        }
       }
 
       // 验证并保存全局思维导图设置
       const globalMindmapSettingValue = (dialog.element.querySelector("[data-type='globalMindmapSetting']") as HTMLTextAreaElement).value;
-      try {
-        JSON.parse(globalMindmapSettingValue); // 验证JSON格式
-        this.data[STORAGE_NAME].globalMindmapSetting = globalMindmapSettingValue;
-      } catch (e) {
-        // JSON格式错误时使用默认配置
-        console.warn('Global mindmap setting JSON parse error, using default config');
-        this.data[STORAGE_NAME].globalMindmapSetting = '{}';
+      if (globalMindmapSettingValue.trim() === '') {
+        // 允许用户保存空字符串
+        this.data[STORAGE_NAME].globalMindmapSetting = '';
+      } else {
+        try {
+          JSON.parse(globalMindmapSettingValue); // 验证JSON格式
+          this.data[STORAGE_NAME].globalMindmapSetting = globalMindmapSettingValue;
+        } catch (e) {
+          // JSON格式错误时使用默认配置
+          console.warn('Global mindmap setting JSON parse error, using default config');
+          this.data[STORAGE_NAME].globalMindmapSetting = '{}';
+        }
       }
       
       this.saveData(STORAGE_NAME, this.data[STORAGE_NAME]);
@@ -541,7 +551,7 @@ export default class MindmapPlugin extends Plugin {
           textarea.style.height = "200px";
           textarea.style.fontFamily = "monospace";
           textarea.style.resize = "vertical";
-          textarea.value = this.data[STORAGE_NAME].themeConfig || JSON.stringify(this.DEFAULT_THEME_CONFIG, null, 2);
+          textarea.value = this.data[STORAGE_NAME].themeConfig;
           return textarea;
         },
       },
@@ -727,23 +737,52 @@ export default class MindmapPlugin extends Plugin {
     }
   }
 
+  // 获取默认的思维导图数据结构（使用配置的默认主题）
+  private getDefaultMindMapData(): any {
+    const defaultTheme = this.data[STORAGE_NAME].defaultTheme || 'lemonBubbles';
+    
+    // 获取主题自定义配置
+    let themeConfig = {};
+    try {
+      const configStr = this.data[STORAGE_NAME].themeConfig;
+      if (configStr !== undefined && configStr !== null) {
+        // 如果配置存在（即使是空字符串），尝试解析
+        if (configStr.trim()) {
+          themeConfig = JSON.parse(configStr);
+        }
+        // 如果是空字符串，themeConfig 保持为 {}
+      } else {
+        // 如果配置不存在，使用默认配置
+        themeConfig = this.DEFAULT_THEME_CONFIG;
+      }
+    } catch (e) {
+      console.warn('Failed to parse theme config, using default');
+      themeConfig = this.DEFAULT_THEME_CONFIG;
+    }
+
+    return {
+      root: {
+        data: {
+          text: '根节点'
+        },
+        children: []
+      },
+      theme: {
+        template: defaultTheme,
+        config: themeConfig
+      },
+      smmVersion: "0.14.0-fix.1",
+      layout: 'logicalStructure',
+      config: {},
+      view: null
+    };
+  }
+
 
 
   public async newMindmapImage(protyle, blockID: string, callback?: (imageInfo: MindmapImageInfo) => void) {
     const format = this.data[STORAGE_NAME].embedImageFormat;
-    const defaultTheme = this.data[STORAGE_NAME].defaultTheme || 'lemonBubbles';
     const defaultRainbowLines = this.data[STORAGE_NAME].defaultRainbowLines || 'none';
-    
-    // 获取主题自定义配置
-    let themeConfig = this.DEFAULT_THEME_CONFIG;
-    try {
-      const configStr = this.data[STORAGE_NAME].themeConfig;
-      if (configStr) {
-        themeConfig = JSON.parse(configStr);
-      }
-    } catch (e) {
-      console.warn('Failed to parse theme config, using default');
-    }
 
     // 获取彩虹线条配置
     let rainbowLinesConfig: { open: boolean; colorsList?: string[] } = { open: false };
@@ -768,24 +807,7 @@ export default class MindmapPlugin extends Plugin {
     await fetchSyncPost('/api/file/putFile', formData);
     const imageURL = `assets/${imageName}`;
     protyle.insert(`![](${imageURL})`);
-      // 初始化空思维导图到块属性
-      const initial = {
-        root: {
-          data: {
-            text: '根节点'
-          },
-          children: []
-        },
-        theme: {
-          template: defaultTheme,
-          config: themeConfig
-        },
-        smmVersion: "0.14.0-fix.1",
-        layout: 'logicalStructure',
-        config: {},
-        view: null
-      };
-
+      
       // 初始化配置（彩虹线条等）
       const initialConfig = {
         rainbowLinesConfig: rainbowLinesConfig
@@ -1432,19 +1454,7 @@ export default class MindmapPlugin extends Plugin {
         
         if (message.event === 'request_data') {
           // iframe 请求数据 - 可编辑但不自动保存
-          let themeConfig: any = {};
-          try {
-            const raw = this.data[STORAGE_NAME] && this.data[STORAGE_NAME].themeConfig;
-            if (raw && typeof raw === 'string' && raw.trim()) {
-              themeConfig = JSON.parse(raw);
-            } else if (raw && typeof raw === 'object') {
-              themeConfig = raw;
-            } else {
-              themeConfig = this.DEFAULT_THEME_CONFIG || {};
-            }
-          } catch (e) {
-            themeConfig = this.DEFAULT_THEME_CONFIG || {};
-          }
+
 
           // 获取彩虹线条配置
           let rainbowLinesConfig: { open: boolean; colorsList?: string[] } = { open: false };
@@ -1473,7 +1483,7 @@ export default class MindmapPlugin extends Plugin {
               root: mindmapData,
               theme: {
                 template: this.data[STORAGE_NAME].defaultTheme || 'lemonBubbles',
-                config: themeConfig
+                config: this.data[STORAGE_NAME].themeConfig
               },
               smmVersion: "0.14.0-fix.1",
               layout: 'logicalStructure',
@@ -1724,7 +1734,7 @@ export default class MindmapPlugin extends Plugin {
               
               postMessage({
                 event: 'init_data',
-                mindMapData: mindMapData,
+                mindMapData: mindMapData || that.getDefaultMindMapData(),
                 mindMapConfig: mindMapConfig,
                 lang: window.siyuan.config.lang.split('_')[0] || 'zh',
                 localConfig: null
@@ -1732,7 +1742,7 @@ export default class MindmapPlugin extends Plugin {
             } catch (err) {
               postMessage({
                 event: 'init_data',
-                mindMapData: null,
+                mindMapData: that.getDefaultMindMapData(),
                 mindMapConfig: {},
                 lang: window.siyuan.config.lang.split('_')[0] || 'zh',
                 localConfig: null
@@ -1741,7 +1751,7 @@ export default class MindmapPlugin extends Plugin {
           } else {
             postMessage({
               event: 'init_data',
-              mindMapData: null,
+              mindMapData: that.getDefaultMindMapData(),
               mindMapConfig: {},
               lang: window.siyuan.config.lang.split('_')[0] || 'zh',
               localConfig: null
@@ -1961,19 +1971,6 @@ export default class MindmapPlugin extends Plugin {
             if (!message) return;
             
             if (message.event === 'request_data') {
-              let themeConfig: any = {};
-              try {
-                const raw = that.data[STORAGE_NAME] && that.data[STORAGE_NAME].themeConfig;
-                if (raw && typeof raw === 'string' && raw.trim()) {
-                  themeConfig = JSON.parse(raw);
-                } else if (raw && typeof raw === 'object') {
-                  themeConfig = raw;
-                } else {
-                  themeConfig = that.DEFAULT_THEME_CONFIG || {};
-                }
-              } catch (e) {
-                themeConfig = that.DEFAULT_THEME_CONFIG || {};
-              }
 
               // 获取彩虹线条配置
               let rainbowLinesConfig: { open: boolean; colorsList?: string[] } = { open: false };
@@ -2002,7 +1999,7 @@ export default class MindmapPlugin extends Plugin {
                   root: mindmapData,
                   theme: {
                     template: that.data[STORAGE_NAME].defaultTheme || 'lemonBubbles',
-                    config: themeConfig
+                    config: that.data[STORAGE_NAME].themeConfig
                   },
                   smmVersion: "0.14.0-fix.1",
                   layout: 'logicalStructure',
@@ -2244,7 +2241,7 @@ export default class MindmapPlugin extends Plugin {
           
           postMessage({
             event: 'init_data',
-            mindMapData: mindMapData,
+            mindMapData: mindMapData || this.getDefaultMindMapData(),
             mindMapConfig: mindMapConfig,
             lang: window.siyuan.config.lang.split('_')[0] || 'zh',
             localConfig: null,
@@ -2253,7 +2250,7 @@ export default class MindmapPlugin extends Plugin {
         } catch (err) {
           postMessage({
             event: 'init_data',
-            mindMapData: null,
+            mindMapData: this.getDefaultMindMapData(),
             mindMapConfig: {},
             lang: window.siyuan.config.lang.split('_')[0] || 'zh',
             localConfig: null,
@@ -2263,7 +2260,7 @@ export default class MindmapPlugin extends Plugin {
       } else {
         postMessage({
           event: 'init_data',
-          mindMapData: null,
+          mindMapData: this.getDefaultMindMapData(),
           mindMapConfig: {},
           lang: window.siyuan.config.lang.split('_')[0] || 'zh',
           localConfig: null,
