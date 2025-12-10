@@ -16,7 +16,6 @@ export const DEFAULT_THEME_CONFIG = {
     "borderWidth": 2,
     "marginY": 16
   },
-  "lineStyle": "curve",
   "rootLineKeepSameInCurve": true,
   "rootLineStartPositionKeepSameInCurve": true,
   "showLineMarker": false
