@@ -25,5 +25,6 @@
   "docTreeToMindmap": "思绪：子文档转导图",
   "docOutlineToMindmap": "思绪：文档大纲转导图",
   "contentToMindmap": "思绪：笔记内容转导图",
+  "docContentToMindmap": "思绪：文档内容转导图",
   "tempMindmapTip": "临时预览模式：可以编辑但不会自动保存文件，请使用复制节点为思源图片功能（或者导出功能）保存您的修改"
 }
