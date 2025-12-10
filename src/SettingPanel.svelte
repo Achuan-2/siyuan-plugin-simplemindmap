@@ -68,6 +68,19 @@
         { value: 'blackGold', name: '黑金' }
     ];
 
+    // 可用的思维导图结构列表
+    const LAYOUT_LIST = [
+        { value: 'logicalStructure', name: '逻辑结构图' },
+        { value: 'logicalStructureLeft', name: '逻辑结构图（左侧）' },
+        { value: 'mindMap', name: '思维导图' },
+        { value: 'organizationStructure', name: '组织结构图' },
+        { value: 'catalogOrganization', name: '目录组织图' },
+        { value: 'timeline', name: '时间轴' },
+        { value: 'timeline2', name: '时间轴2' },
+        { value: 'verticalTimeline', name: '竖向时间轴' },
+        { value: 'fishbone', name: '鱼骨图' }
+    ];
+
     // 彩虹线条配置列表（包含完整颜色信息）
     const RAINBOW_LINES_OPTIONS = [
         { value: 'none', name: '无', list: null },
@@ -198,7 +211,7 @@
             ]
         },
         {
-            name: '🎨主题设置',
+            name: '🎨导图样式设置',
             items: [
                 {
                     key: 'defaultTheme',
@@ -206,6 +219,14 @@
                     type: 'custom',
                     title: '默认主题',
                     description: '新建思维导图时使用的默认主题',
+                    direction: 'row'
+                },
+                {
+                    key: 'defaultLayout',
+                    value: settings.defaultLayout,
+                    type: 'custom',
+                    title: '默认结构',
+                    description: '新建思维导图时使用的默认结构',
                     direction: 'row'
                 },
                 {
@@ -317,7 +338,7 @@
         console.log(detail.key, detail.value);
         const setting = settings[detail.key];
         if (setting !== undefined) {
-            settings[detail.key] = detail.value;
+            settings = { ...settings, [detail.key]: detail.value };
             saveSettings();
         }
     };
@@ -339,6 +360,9 @@
         }
         if (!target.closest('.theme-dropdown-container')) {
             themeDropdownOpen = false;
+        }
+        if (!target.closest('.layout-dropdown-container')) {
+            layoutDropdownOpen = false;
         }
     }
 
@@ -362,30 +386,41 @@
     }
 
     function selectRainbowOption(value: string) {
-        settings.defaultRainbowLines = value;
+        settings = { ...settings, defaultRainbowLines: value };
         rainbowDropdownOpen = false;
-        onChanged({ detail: { group: currentGroup?.name || '', key: 'defaultRainbowLines', value: value } });
+        saveSettings();
     }
 
-    function getSelectedRainbowOption() {
-        return RAINBOW_LINES_OPTIONS.find(opt => opt.value === settings.defaultRainbowLines) || RAINBOW_LINES_OPTIONS[0];
-    }
+    $: selectedRainbowOption = RAINBOW_LINES_OPTIONS.find(opt => opt.value === settings.defaultRainbowLines) || RAINBOW_LINES_OPTIONS[0];
 
     function selectThemeOption(value: string) {
-        settings.defaultTheme = value;
+        settings = { ...settings, defaultTheme: value };
         themeDropdownOpen = false;
-        onChanged({ detail: { group: currentGroup?.name || '', key: 'defaultTheme', value: value } });
+        saveSettings();
     }
 
-    function getSelectedThemeOption() {
-        return THEME_LIST.find(opt => opt.value === settings.defaultTheme) || THEME_LIST[0];
-    }
+    $: selectedThemeOption = THEME_LIST.find(opt => opt.value === settings.defaultTheme) || THEME_LIST[0];
 
     function getThemeImagePath(themeValue: string): string {
         // classic8-15 使用 PNG 格式，其他使用 JPG 格式
         const pngThemes = ['classic8', 'classic9', 'classic10', 'classic11', 'classic12', 'classic13', 'classic14', 'classic15'];
         const extension = pngThemes.includes(themeValue) ? 'png' : 'jpg';
         return `plugins/siyuan-plugin-simplemindmap/mindmap-embed/dist/img/${themeValue}.${extension}`;
+    }
+
+    let layoutDropdownOpen = false;
+    let layoutDropdownTrigger: HTMLElement;
+
+    function selectLayoutOption(value: string) {
+        settings = { ...settings, defaultLayout: value };
+        layoutDropdownOpen = false;
+        saveSettings();
+    }
+
+    $: selectedLayoutOption = LAYOUT_LIST.find(opt => opt.value === settings.defaultLayout) || LAYOUT_LIST[0];
+
+    function getLayoutImagePath(layoutValue: string): string {
+        return `plugins/siyuan-plugin-simplemindmap/mindmap-embed/dist/img/${layoutValue}.jpg`;
     }
 
     $: currentGroup = groups.find(group => group.name === focusGroup);
@@ -431,12 +466,12 @@
                                     tabindex="0"
                                 >
                                     <img 
-                                        src={getThemeImagePath(getSelectedThemeOption().value)} 
-                                        alt={getSelectedThemeOption().name}
+                                        src={getThemeImagePath(selectedThemeOption.value)} 
+                                        alt={selectedThemeOption.name}
                                         class="theme-preview-img"
                                     />
                                     <span class="theme-preview-text">
-                                        {getSelectedThemeOption().name}
+                                        {selectedThemeOption.name}
                                         <svg class="dropdown-arrow" class:open={themeDropdownOpen} width="12" height="12" viewBox="0 0 12 12">
                                             <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
                                         </svg>
@@ -474,6 +509,69 @@
                                 {/each}
                             </div>
                         {/if}
+                    {:else if item.key === 'defaultLayout'}
+                        <!-- Custom Layout Dropdown Selector -->
+                        <div class="fn__flex b3-label config__item">
+                            <div class="fn__flex-1">
+                                <div class="fn__block">{item.title}</div>
+                                {#if item.description}
+                                    <div class="b3-label__text">{item.description}</div>
+                                {/if}
+                            </div>
+                            <span class="fn__space"></span>
+                            <div class="layout-dropdown-container fn__flex-center fn__size200">
+                                <div 
+                                    class="layout-dropdown-trigger"
+                                    bind:this={layoutDropdownTrigger}
+                                    on:click|stopPropagation={() => layoutDropdownOpen = !layoutDropdownOpen}
+                                    on:keydown={() => {}}
+                                    role="button"
+                                    tabindex="0"
+                                >
+                                    <img 
+                                        src={getLayoutImagePath(selectedLayoutOption.value)} 
+                                        alt={selectedLayoutOption.name}
+                                        class="layout-preview-img"
+                                    />
+                                    <span class="layout-preview-text">
+                                        {selectedLayoutOption.name}
+                                        <svg class="dropdown-arrow" class:open={layoutDropdownOpen} width="12" height="12" viewBox="0 0 12 12">
+                                            <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Layout dropdown menu rendered at body level -->
+                        {#if layoutDropdownOpen && layoutDropdownTrigger}
+                            <div 
+                                class="layout-dropdown-menu"
+                                style="
+                                    left: {layoutDropdownTrigger.getBoundingClientRect().left}px;
+                                    top: {layoutDropdownTrigger.getBoundingClientRect().bottom + 4}px;
+                                    width: {layoutDropdownTrigger.getBoundingClientRect().width}px;
+                                "
+                            >
+                                {#each LAYOUT_LIST as layout}
+                                    <div 
+                                        class="layout-dropdown-item" 
+                                        class:selected={settings.defaultLayout === layout.value}
+                                        on:click|stopPropagation={() => selectLayoutOption(layout.value)}
+                                        on:keydown={() => {}}
+                                        role="button"
+                                        tabindex="0"
+                                    >
+                                        <img 
+                                            src={getLayoutImagePath(layout.value)} 
+                                            alt={layout.name}
+                                            class="layout-item-img"
+                                        />
+                                        <span class="layout-item-name">{layout.name}</span>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
                     {:else if item.key === 'defaultRainbowLines'}
                         <!-- Custom Rainbow Lines Dropdown Selector -->
                         <div class="fn__flex b3-label config__item">
@@ -493,14 +591,14 @@
                                     role="button"
                                     tabindex="0"
                                 >
-                                    {#if getSelectedRainbowOption().list}
+                                    {#if selectedRainbowOption.list}
                                         <div class="rainbow-preview">
-                                            {#each getSelectedRainbowOption().list as color}
+                                            {#each selectedRainbowOption.list as color}
                                                 <span class="color-preview-item" style="background-color: {color};"></span>
                                             {/each}
                                         </div>
                                     {:else}
-                                        <span class="rainbow-preview-text">{getSelectedRainbowOption().name}</span>
+                                        <span class="rainbow-preview-text">{selectedRainbowOption.name}</span>
                                     {/if}
                                     <svg class="dropdown-arrow" class:open={rainbowDropdownOpen} width="12" height="12" viewBox="0 0 12 12">
                                         <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
@@ -515,7 +613,7 @@
                                 class="rainbow-dropdown-menu"
                                 style="
                                     left: {dropdownTrigger.getBoundingClientRect().left}px;
-                                    top: {dropdownTrigger.getBoundingClientRect().bottom + 4}px;
+                                    bottom: {window.innerHeight - dropdownTrigger.getBoundingClientRect().top + 4}px;
                                     width: {dropdownTrigger.getBoundingClientRect().width}px;
                                 "
                             >
@@ -603,7 +701,7 @@
     .theme-preview-img {
         width: 180px;
         height: 72.52px;
-        object-fit: cover;
+        object-fit: contain;
         border-radius: 3px;
         flex-shrink: 0;
     }
@@ -664,13 +762,115 @@
     .theme-item-img {
         width: 180px;
         height: 72.52px;
-        object-fit: cover;
+        object-fit: contain;
         border-radius: 3px;
         flex-shrink: 0;
         transition: transform 0.2s;
     }
 
     .theme-item-name {
+        flex: 1;
+        font-size: 13px;
+        color: var(--b3-theme-on-surface);
+    }
+
+
+    /* Layout Dropdown Styles */
+    .layout-dropdown-container {
+        position: relative;
+        width: 300px;
+    }
+
+    .layout-dropdown-trigger {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        background: var(--b3-theme-surface);
+        border: 1px solid var(--b3-border-color);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 100%;
+
+        &:hover {
+            border-color: var(--b3-theme-primary);
+            background: var(--b3-theme-background);
+        }
+    }
+
+    .layout-preview-img {
+        width: 180px;
+        height: 72.52px;
+        object-fit: contain;
+        border-radius: 3px;
+        flex-shrink: 0;
+    }
+
+    .layout-preview-text {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+        color: var(--b3-theme-on-surface);
+    }
+
+    .layout-dropdown-menu {
+        position: fixed;
+        max-height: 400px;
+        overflow-y: auto;
+        background: var(--b3-theme-surface);
+        border: 1px solid var(--b3-border-color);
+        border-radius: 4px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        z-index: 9999;
+        animation: dropdownFadeIn 0.15s ease;
+    }
+
+    .layout-dropdown-item {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        cursor: pointer;
+        transition: all 0.15s;
+        border-bottom: 1px solid var(--b3-theme-background);
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        &:hover {
+            background: var(--b3-theme-background);
+            
+            .layout-item-img {
+                transform: scale(1.02);
+            }
+        }
+
+        &.selected {
+            background: var(--b3-theme-primary-lightest);
+            
+            .layout-item-name {
+                color: var(--b3-theme-primary);
+                font-weight: 500;
+            }
+        }
+    }
+
+    .layout-item-img {
+        width: 180px;
+        height: 72.52px;
+        object-fit: contain;
+        border-radius: 3px;
+        flex-shrink: 0;
+        transition: transform 0.2s;
+    }
+
+    .layout-item-name {
         flex: 1;
         font-size: 13px;
         color: var(--b3-theme-on-surface);

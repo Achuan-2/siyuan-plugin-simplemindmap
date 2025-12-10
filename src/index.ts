@@ -499,6 +499,7 @@ export default class MindmapPlugin extends Plugin {
   // 获取默认的思维导图数据结构（使用配置的默认主题）
   private getDefaultMindMapData(): any {
     const defaultTheme = this.data[STORAGE_NAME].defaultTheme || 'lemonBubbles';
+    const defaultLayout = this.data[STORAGE_NAME].defaultLayout || 'logicalStructure';
     
     // 获取主题自定义配置
     let themeConfig = {};
@@ -531,7 +532,7 @@ export default class MindmapPlugin extends Plugin {
         config: themeConfig
       },
       smmVersion: "0.14.0-fix.1",
-      layout: 'logicalStructure',
+      layout: defaultLayout,
       config: {},
       view: null
     };

@@ -21,6 +21,7 @@ export const getDefaultSettings = () => ({
   embedImageFormat: "png",
   editWindow: "dialog",
   defaultTheme: "lemonBubbles",
+  defaultLayout: "logicalStructure",
   themeConfig: JSON.stringify(DEFAULT_THEME_CONFIG, null, 2),
   defaultRainbowLines: "none",
   globalMindmapSetting: "{}"
