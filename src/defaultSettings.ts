@@ -7,12 +7,14 @@ export const DEFAULT_THEME_CONFIG = {
   },
   "second": {
     "fontSize": 24,
-    "shape": "rectangle"
+    "shape": "rectangle",
+    "marginY": 16
   },
   "node": {
     "fontSize": 24,
     "borderColor": "#4D4D4D",
-    "borderWidth": 2
+    "borderWidth": 2,
+    "marginY": 16
   },
   "lineStyle": "curve",
   "rootLineKeepSameInCurve": true,
@@ -179,5 +181,5 @@ export const getDefaultSettings = () => ({
   defaultLayout: "logicalStructure",
   themeConfig: JSON.stringify(DEFAULT_THEME_CONFIG, null, 2),
   defaultRainbowLines: "colors2",
-  globalMindmapSetting: "{}"
+  globalMindmapSetting: `{"mousewheelAction":"zoom"}`
 });
