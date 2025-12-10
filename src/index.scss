@@ -63,9 +63,7 @@
     }
 }
 
-html[data-theme-mode="dark"] img[src^="assets/mindmap-"] {
-    filter: invert(0.8) brightness(1.2);
-}
+
 
 div[data-type='NodeParagraph']:not(:hover) .protyle-attr .label--embed-mindmap:not(.label--embed-mindmap--always) {
   display: none !important;
