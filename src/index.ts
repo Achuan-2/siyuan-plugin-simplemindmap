@@ -32,7 +32,7 @@ import { matchHotKey } from "./utils/hotkey";
 import defaultImageContent from "@/default.json";
 import { importOutline, importDocTree, importContent } from "../mind-map/web/src/utils/noteImport";
 import SettingPanel from "./SettingPanel.svelte";
-import { getDefaultSettings } from "./defaultSettings";
+import { getDefaultSettings, DEFAULT_THEME_CONFIG, THEME_LIST, RAINBOW_LINES_OPTIONS } from "./defaultSettings";
 
 let PluginInfo = {
   version: '',
@@ -76,7 +76,7 @@ export default class MindmapPlugin extends Plugin {
   async onload() {
     // 添加自定义思维导图图标
     this.addIcons(`<symbol id="iconSimpleMindmap" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M640 138.666667c-53.717333 0-98.986667 36.096-112.896 85.333333H469.333333A160 160 0 0 0 309.333333 384v10.666667H256a117.333333 117.333333 0 1 0 0 234.666666h53.333333V640A160 160 0 0 0 469.333333 800h57.770667a117.376 117.376 0 0 0 112.896 85.333333h128a117.333333 117.333333 0 1 0 0-234.666666h-128c-53.717333 0-98.986667 36.096-112.896 85.333333H469.333333A96 96 0 0 1 373.333333 640v-10.666667H384a117.333333 117.333333 0 1 0 0-234.666666h-10.666667V384A96 96 0 0 1 469.333333 288h57.770667a117.376 117.376 0 0 0 112.896 85.333333h128a117.333333 117.333333 0 1 0 0-234.666666h-128zM586.666667 256c0-29.44 23.893333-53.333333 53.333333-53.333333h128a53.333333 53.333333 0 1 1 0 106.666666h-128c-29.44 0-53.333333-23.893333-53.333333-53.333333z m-384 256c0-29.44 23.893333-53.333333 53.333333-53.333333h128a53.333333 53.333333 0 1 1 0 106.666666H256c-29.44 0-53.333333-23.893333-53.333333-53.333333z m384 256c0-29.44 23.893333-53.333333 53.333333-53.333333h128a53.333333 53.333333 0 1 1 0 106.666666h-128c-29.44 0-53.333333-23.893333-53.333333-53.333333z" fill="currentColor"></path></symbol>`);
-    
+
     this.initMetaInfo();
     this.initSetting();
 
@@ -123,7 +123,7 @@ export default class MindmapPlugin extends Plugin {
       editBtnElement.addEventListener("click", async (event: PointerEvent) => {
         event.preventDefault();
         event.stopPropagation();
-        
+
         if (imgSrc && blockID) {
           this.getMindmapImageInfo(imgSrc, true).then((imageInfo: MindmapImageInfo) => {
             if (imageInfo) {
@@ -139,14 +139,14 @@ export default class MindmapPlugin extends Plugin {
 
       // Insert button and adjust styles
       action.insertAdjacentElement('afterbegin', editBtnElement);
-      
+
       // Reset all button styles
       for (const child of action.children) {
         child.classList.toggle('protyle-icon--only', false);
         child.classList.toggle('protyle-icon--first', false);
         child.classList.toggle('protyle-icon--last', false);
       }
-      
+
       // Apply appropriate styles based on button count
       if (action.children.length == 1) {
         action.firstElementChild.classList.toggle('protyle-icon--only', true);
@@ -160,7 +160,7 @@ export default class MindmapPlugin extends Plugin {
     this.setupEditTab();
 
     this.protyleSlash = [{
-      filter: ["mindmap", "simple-mindmap", "simplemindmap","思绪思维导图","脑图","naotu","sixusiweidaotu"],
+      filter: ["mindmap", "simple-mindmap", "simplemindmap", "思绪思维导图", "脑图", "naotu", "sixusiweidaotu"],
       id: "simplemindmap",
       html: `<div class="b3-list-item__first"><svg class="b3-list-item__graphic"><use xlink:href="#iconImage"></use></svg><span class="b3-list-item__text">思绪思维导图</span></div>`,
       callback: (protyle, nodeElement) => {
@@ -228,167 +228,11 @@ export default class MindmapPlugin extends Plugin {
     });
   }
 
-  // 可用的思维导图主题列表
-  private readonly THEME_LIST = [
-    { value: 'default', name: '默认主题' },
-    { value: 'skyGreen', name: '天清绿' },
-    { value: 'classicGreen', name: '经典绿' },
-    { value: 'classicBlue', name: '经典蓝' },
-    { value: 'blueSky', name: '天空蓝' },
-    { value: 'brainImpairedPink', name: '脑残粉' },
-    { value: 'earthYellow', name: '泥土黄' },
-    { value: 'freshGreen', name: '清新绿' },
-    { value: 'freshRed', name: '清新红' },
-    { value: 'romanticPurple', name: '浪漫紫' },
-    { value: 'pinkGrape', name: '粉红葡萄' },
-    { value: 'mint', name: '薄荷' },
-    { value: 'gold', name: '金色vip' },
-    { value: 'vitalityOrange', name: '活力橙' },
-    { value: 'greenLeaf', name: '绿叶' },
-    { value: 'minions', name: '小黄人' },
-    { value: 'simpleBlack', name: '简约黑' },
-    { value: 'courseGreen', name: '课程绿' },
-    { value: 'coffee', name: '咖啡' },
-    { value: 'redSpirit', name: '红色精神' },
-    { value: 'avocado', name: '牛油果' },
-    { value: 'autumn', name: '秋天' },
-    { value: 'oreo', name: '奥利奥' },
-    { value: 'shallowSea', name: '浅海' },
-    { value: 'lemonBubbles', name: '柠檬气泡' },
-    { value: 'rose', name: '玫瑰' },
-    { value: 'seaBlueLine', name: '海蓝线' },
-    { value: 'morandi', name: '莫兰迪' },
-    { value: 'cactus', name: '仙人掌' },
-    { value: 'classic2', name: '脑图经典2' },
-    { value: 'classic3', name: '脑图经典3' },
-    { value: 'classic4', name: '脑图经典4' },
-    { value: 'classic5', name: '脑图经典5' },
-    { value: 'classic6', name: '脑图经典6' },
-    { value: 'classic7', name: '脑图经典7' },
-    { value: 'classic8', name: '脑图经典8' },
-    { value: 'classic9', name: '脑图经典9' },
-    { value: 'classic10', name: '脑图经典10' },
-    { value: 'classic11', name: '脑图经典11' },
-    { value: 'classic12', name: '脑图经典12' },
-    { value: 'classic13', name: '脑图经典13' },
-    { value: 'classic14', name: '脑图经典14' },
-    { value: 'classic15', name: '脑图经典15' },
-    // 深色主题
-    { value: 'dark', name: '暗色' },
-    { value: 'dark2', name: '暗色2' },
-    { value: 'dark3', name: '暗色3' },
-    { value: 'dark4', name: '暗色4' },
-    { value: 'blackHumour', name: '黑色幽默' },
-    { value: 'lateNightOffice', name: '深夜办公室' },
-    { value: 'blackGold', name: '黑金' }
-  ];
-
-  // 默认主题配置
-  private readonly DEFAULT_THEME_CONFIG = {
-    imgMaxWidth: 350,
-    imgMaxHeight: 200,
-    root: {
-      shape: "rectangle"
-    },
-    second: {
-      fontSize: 24,
-      shape: "rectangle"
-    },
-    node: {
-      fontSize: 24,
-      borderColor: "#4D4D4D",
-      borderWidth: 2
-    }
-  };
-
-  // 彩虹线条配置列表
-  private readonly RAINBOW_LINES_OPTIONS = [
-    { value: 'none', name: '无', list: null },
-    {
-      value: 'colors1',
-      name: '彩虹1',
-      list: [
-        'rgb(255, 213, 73)',
-        'rgb(255, 136, 126)',
-        'rgb(107, 225, 141)',
-        'rgb(151, 171, 255)',
-        'rgb(129, 220, 242)',
-        'rgb(255, 163, 125)',
-        'rgb(152, 132, 234)'
-      ]
-    },
-    {
-      value: 'colors2',
-      name: '彩虹2',
-      list: [
-        'rgb(248, 93, 93)',
-        'rgb(255, 151, 84)',
-        'rgb(255, 214, 69)',
-        'rgb(73, 205, 140)',
-        'rgb(64, 192, 255)',
-        'rgb(84, 110, 214)',
-        'rgb(164, 93, 220)'
-      ]
-    },
-    {
-      value: 'colors3',
-      name: '彩虹3',
-      list: [
-        'rgb(140, 240, 231)',
-        'rgb(74, 210, 255)',
-        'rgb(65, 168, 243)',
-        'rgb(49, 128, 205)',
-        'rgb(188, 226, 132)',
-        'rgb(113, 215, 123)',
-        'rgb(120, 191, 109)'
-      ]
-    },
-    {
-      value: 'colors4',
-      name: '彩虹4',
-      list: [
-        'rgb(169, 98, 99)',
-        'rgb(245, 125, 123)',
-        'rgb(254, 183, 168)',
-        'rgb(251, 218, 171)',
-        'rgb(138, 163, 181)',
-        'rgb(131, 127, 161)',
-        'rgb(84, 83, 140)'
-      ]
-    },
-    {
-      value: 'colors5',
-      name: '彩虹5',
-      list: [
-        'rgb(255, 229, 142)',
-        'rgb(254, 158, 41)',
-        'rgb(248, 119, 44)',
-        'rgb(232, 82, 80)',
-        'rgb(182, 66, 98)',
-        'rgb(99, 54, 99)',
-        'rgb(65, 40, 82)'
-      ]
-    },
-    {
-      value: 'colors6',
-      name: '彩虹6',
-      list: [
-        'rgb(171, 227, 209)',
-        'rgb(107, 201, 196)',
-        'rgb(55, 170, 169)',
-        'rgb(18, 135, 131)',
-        'rgb(74, 139, 166)',
-        'rgb(75, 105, 150)',
-        'rgb(57, 75, 133)'
-      ]
-    }
-  ];
-
   private async initSetting() {
     const defaultSettings = getDefaultSettings();
     await this.loadData(STORAGE_NAME);
     if (!this.data[STORAGE_NAME]) this.data[STORAGE_NAME] = {};
-    
+
     // Merge default settings with loaded settings
     Object.keys(defaultSettings).forEach(key => {
       if (typeof this.data[STORAGE_NAME][key] === 'undefined') {
@@ -500,7 +344,7 @@ export default class MindmapPlugin extends Plugin {
   private getDefaultMindMapData(): any {
     const defaultTheme = this.data[STORAGE_NAME].defaultTheme || 'lemonBubbles';
     const defaultLayout = this.data[STORAGE_NAME].defaultLayout || 'logicalStructure';
-    
+
     // 获取主题自定义配置
     let themeConfig = {};
     try {
@@ -513,11 +357,11 @@ export default class MindmapPlugin extends Plugin {
         // 如果是空字符串，themeConfig 保持为 {}
       } else {
         // 如果配置不存在，使用默认配置
-        themeConfig = this.DEFAULT_THEME_CONFIG;
+        themeConfig = DEFAULT_THEME_CONFIG;
       }
     } catch (e) {
       console.warn('Failed to parse theme config, using default');
-      themeConfig = this.DEFAULT_THEME_CONFIG;
+      themeConfig = DEFAULT_THEME_CONFIG;
     }
 
     return {
@@ -547,7 +391,7 @@ export default class MindmapPlugin extends Plugin {
     // 获取彩虹线条配置
     let rainbowLinesConfig: { open: boolean; colorsList?: string[] } = { open: false };
     if (defaultRainbowLines !== 'none') {
-      const rainbowOption = this.RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
+      const rainbowOption = RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
       if (rainbowOption && rainbowOption.list) {
         rainbowLinesConfig = {
           open: true,
@@ -555,7 +399,7 @@ export default class MindmapPlugin extends Plugin {
         };
       }
     }
-    
+
     const imageName = `mindmap-image-${window.Lute.NewNodeID()}.${format}`;
     const placeholderImageContent = this.getPlaceholderImageContent(format);
     const blob = dataURLToBlob(placeholderImageContent);
@@ -567,39 +411,39 @@ export default class MindmapPlugin extends Plugin {
     await fetchSyncPost('/api/file/putFile', formData);
     const imageURL = `assets/${imageName}`;
     protyle.insert(`![](${imageURL})`);
-      
-      // 初始化配置（彩虹线条等）
-      const initialConfig = {
-        rainbowLinesConfig: rainbowLinesConfig
-      };
-      console.log('Initial mindmap config:', initialConfig);
-      
-      // 分离保存配置 — 不再在新建块时保存 legacy `custom-mindmap`
-      const attrs: any = {};
-      
-      // 保存彩虹线条配置到单独的属性
-      if (rainbowLinesConfig) {
-        attrs['custom-mindmap-rainbowLinesConfig'] = JSON.stringify(rainbowLinesConfig);
-      }
-      
-      // 如果有其他配置，保存到custom-mindmap-setting
-      const { rainbowLinesConfig: _, ...otherConfig } = initialConfig;
-      if (Object.keys(otherConfig).length > 0) {
-        attrs['custom-mindmap-setting'] = JSON.stringify(otherConfig);
-      }
-      
-      try {
-        await fetchSyncPost('/api/attr/setBlockAttrs', { 
-          id: blockID, 
-          attrs: attrs
-        });
-      } catch (err) { }
 
-      const imageInfo: MindmapImageInfo = {
-        imageURL: imageURL,
-        data: placeholderImageContent,
-        format: format,
-      };
+    // 初始化配置（彩虹线条等）
+    const initialConfig = {
+      rainbowLinesConfig: rainbowLinesConfig
+    };
+    console.log('Initial mindmap config:', initialConfig);
+
+    // 分离保存配置 — 不再在新建块时保存 legacy `custom-mindmap`
+    const attrs: any = {};
+
+    // 保存彩虹线条配置到单独的属性
+    if (rainbowLinesConfig) {
+      attrs['custom-mindmap-rainbowLinesConfig'] = JSON.stringify(rainbowLinesConfig);
+    }
+
+    // 如果有其他配置，保存到custom-mindmap-setting
+    const { rainbowLinesConfig: _, ...otherConfig } = initialConfig;
+    if (Object.keys(otherConfig).length > 0) {
+      attrs['custom-mindmap-setting'] = JSON.stringify(otherConfig);
+    }
+
+    try {
+      await fetchSyncPost('/api/attr/setBlockAttrs', {
+        id: blockID,
+        attrs: attrs
+      });
+    } catch (err) { }
+
+    const imageInfo: MindmapImageInfo = {
+      imageURL: imageURL,
+      data: placeholderImageContent,
+      format: format,
+    };
     if (callback) {
       callback(imageInfo);
     }
@@ -686,7 +530,7 @@ export default class MindmapPlugin extends Plugin {
       // 没有属性标识，但是PNG或SVG图片，检查是否包含导图元数据
       this.getMindmapImageInfo(imageURL, true).then(async (imageInfo: MindmapImageInfo) => {
         if (imageInfo && imageInfo.data) {
-          const hasMindMapData = imageInfo.format === 'png' 
+          const hasMindMapData = imageInfo.format === 'png'
             ? hasMindMapDataInPNG(imageInfo.data)
             : hasMindMapDataInSVG(imageInfo.data);
           if (hasMindMapData) {
@@ -731,7 +575,7 @@ export default class MindmapPlugin extends Plugin {
     const isDoc = !isNotebook;
 
     // 如果既不是笔记本也不是父文档也不是文档，则不显示菜单
-    if (!isNotebook  && !isDoc) return;
+    if (!isNotebook && !isDoc) return;
 
     // 笔记本或父文档：子文档转导图
     if (isNotebook || isParentDoc) {
@@ -853,7 +697,7 @@ export default class MindmapPlugin extends Plugin {
     } catch (error) {
       console.error('生成文档树思维导图失败:', error);
       loadingDialog.destroy();
-      
+
       new Dialog({
         title: "错误",
         content: `<div class="b3-dialog__content">${error.message || '生成失败'}</div>`,
@@ -1244,10 +1088,10 @@ export default class MindmapPlugin extends Plugin {
 
   private openTempMindmapDialog(mindmapData: any, blockSettings?: any) {
     const iframeId = `mindmap-temp-${Date.now()}`;
-    const mindmapURL = this.isBrowser 
+    const mindmapURL = this.isBrowser
       ? `/plugins/${this.name}/mindmap-embed/index.html`
       : `plugins/${this.name}/mindmap-embed/index.html`;
-    
+
     const dialogHTML = `
 <div class="b3-dialog__content" style="padding: 0; height: calc(80vh - 100px);">
   <div style="padding: 8px 16px; background: var(--b3-theme-surface); border-bottom: 1px solid var(--b3-border-color); color: var(--b3-theme-on-surface); display: flex; justify-content: space-between; align-items: center;">
@@ -1294,7 +1138,7 @@ export default class MindmapPlugin extends Plugin {
     // 等待 iframe 加载完成
     const iframe = dialog.element.querySelector(`#${iframeId}`) as HTMLIFrameElement;
     const openInTabBtn = dialog.element.querySelector('#openInTab') as HTMLElement;
-    
+
     // 处理在标签页打开按钮
     if (openInTabBtn) {
       openInTabBtn.addEventListener('click', () => {
@@ -1309,7 +1153,7 @@ export default class MindmapPlugin extends Plugin {
     const messageHandler = (event: MessageEvent) => {
       try {
         const message = JSON.parse(event.data);
-        
+
         if (message.event === 'request_data') {
           // iframe 请求数据 - 可编辑但不自动保存
 
@@ -1318,7 +1162,7 @@ export default class MindmapPlugin extends Plugin {
           let rainbowLinesConfig: { open: boolean; colorsList?: string[] } = { open: false };
           const defaultRainbowLines = this.data[STORAGE_NAME].defaultRainbowLines || 'none';
           if (defaultRainbowLines !== 'none') {
-            const rainbowOption = this.RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
+            const rainbowOption = RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
             if (rainbowOption && rainbowOption.list) {
               rainbowLinesConfig = {
                 open: true,
@@ -1346,11 +1190,11 @@ export default class MindmapPlugin extends Plugin {
                 themeConfig = configStr;
               }
             } else {
-              themeConfig = this.DEFAULT_THEME_CONFIG;
+              themeConfig = DEFAULT_THEME_CONFIG;
             }
           } catch (e) {
             console.warn('Failed to parse theme config, using default');
-            themeConfig = this.DEFAULT_THEME_CONFIG;
+            themeConfig = DEFAULT_THEME_CONFIG;
           }
 
           iframe.contentWindow.postMessage(JSON.stringify({
@@ -1428,7 +1272,7 @@ export default class MindmapPlugin extends Plugin {
       custom: {
         icon: "iconSimpleMindmap",
         title: title,
-        data: { 
+        data: {
           mindmapData: mindmapData,
           blockSettings: blockSettings // 传递块设置
         },
@@ -1509,16 +1353,16 @@ export default class MindmapPlugin extends Plugin {
         const onInit = async (_message: any) => {
           // Load mind map data - 优先从图片元数据读取（PNG/SVG），其次从块属性读取
           if (imageInfo.blockID) {
-              try {
+            try {
               const resp = await fetchSyncPost('/api/attr/getBlockAttrs', { id: imageInfo.blockID });
               let mindMapData = null;
-              let mindMapConfig: { rainbowLinesConfig?: any; [key: string]: any } = {};
-              
+              let mindMapConfig: { rainbowLinesConfig?: any;[key: string]: any } = {};
+
               // 检查是否有 custom-mindmap-image 属性（新版本导图图片标识）
               const hasPngAttr = resp && resp.data && resp.data['custom-mindmap-image'] === 'true';
               // 检查是否有 custom-mindmap 属性（旧版本块属性存储）
               const hasOldAttr = resp && resp.data && resp.data['custom-mindmap'];
-              
+
               // 如果是PNG格式，尝试从图片元数据读取
               if (imageInfo.format === 'png' && imageInfo.data) {
                 try {
@@ -1526,19 +1370,19 @@ export default class MindmapPlugin extends Plugin {
                   if (pngData && pngData.mindMapData) {
                     // mindMapData 包含完整结构 { root, theme, layout, view }
                     mindMapData = pngData.mindMapData;
-                    
+
                     // 合并额外的配置（如果有）
                     if (pngData.mindMapConfig && Object.keys(pngData.mindMapConfig).length > 0) {
                       mindMapConfig = { ...mindMapConfig, ...pngData.mindMapConfig };
                     }
-                    
+
                     console.log('Loaded mindmap data from PNG metadata');
                   }
                 } catch (e) {
                   console.warn('Failed to read mindmap data from PNG:', e);
                 }
               }
-              
+
               // 如果是SVG格式，尝试从图片元数据读取
               if (!mindMapData && imageInfo.format === 'svg' && imageInfo.data) {
                 try {
@@ -1546,19 +1390,19 @@ export default class MindmapPlugin extends Plugin {
                   if (svgData && svgData.mindMapData) {
                     // mindMapData 包含完整结构 { root, theme, layout, view }
                     mindMapData = svgData.mindMapData;
-                    
+
                     // 合并额外的配置（如果有）
                     if (svgData.mindMapConfig && Object.keys(svgData.mindMapConfig).length > 0) {
                       mindMapConfig = { ...mindMapConfig, ...svgData.mindMapConfig };
                     }
-                    
+
                     console.log('Loaded mindmap data from SVG metadata');
                   }
                 } catch (e) {
                   console.warn('Failed to read mindmap data from SVG:', e);
                 }
               }
-              
+
               // 如果从图片元数据读取失败，尝试从块属性读取（兼容旧版本）
               if (!mindMapData && hasOldAttr) {
                 try {
@@ -1566,7 +1410,7 @@ export default class MindmapPlugin extends Plugin {
                   console.log('Loaded mindmap data from block attributes (legacy)');
                 } catch (e) { mindMapData = null; }
               }
-              
+
               // 如果有 custom-mindmap-image 属性但没有读取到数据，说明图片可能被替换或损坏
               if (hasPngAttr && !mindMapData && !hasOldAttr) {
                 // 弹窗提示这不是有效的导图图片
@@ -1581,7 +1425,7 @@ export default class MindmapPlugin extends Plugin {
                 });
                 return;
               }
-              
+
               // 整合思维导图配置：全局设置 + 块属性设置 + 彩虹线条设置
               // 1. 先加载全局设置作为基础
               let globalConfig = {};
@@ -1589,7 +1433,7 @@ export default class MindmapPlugin extends Plugin {
                 globalConfig = JSON.parse(that.data[STORAGE_NAME].globalMindmapSetting || '{}');
               } catch (e) { globalConfig = {}; }
               mindMapConfig = { ...globalConfig, ...mindMapConfig };
-              
+
               // 2. 加载块属性设置（非彩虹线条）- 如果图片元数据中没有配置
               if (resp && resp.data && resp.data['custom-mindmap-setting'] && !mindMapConfig.rainbowLinesConfig) {
                 try {
@@ -1597,7 +1441,7 @@ export default class MindmapPlugin extends Plugin {
                   mindMapConfig = { ...mindMapConfig, ...blockConfig };
                 } catch (e) { /* 忽略解析错误 */ }
               }
-              
+
               // 3. 加载彩虹线条设置 - 如果图片元数据中没有配置
               if (!mindMapConfig.rainbowLinesConfig) {
                 if (resp && resp.data && resp.data['custom-mindmap-rainbowLinesConfig']) {
@@ -1609,10 +1453,10 @@ export default class MindmapPlugin extends Plugin {
                   // 如果块属性没有彩虹线条配置，使用插件设置的默认彩虹线条
                   const defaultRainbowLines = that.data[STORAGE_NAME].defaultRainbowLines || 'none';
                   if (defaultRainbowLines !== 'none') {
-                    const rainbowOption = that.RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
+                    const rainbowOption = RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
                     if (rainbowOption && rainbowOption.list) {
-                      mindMapConfig = { 
-                        ...mindMapConfig, 
+                      mindMapConfig = {
+                        ...mindMapConfig,
                         rainbowLinesConfig: {
                           open: true,
                           colorsList: rainbowOption.list
@@ -1622,7 +1466,7 @@ export default class MindmapPlugin extends Plugin {
                   }
                 }
               }
-              
+
               postMessage({
                 event: 'init_data',
                 mindMapData: mindMapData || that.getDefaultMindMapData(),
@@ -1656,16 +1500,16 @@ export default class MindmapPlugin extends Plugin {
             const payload = message.data || null;
             if (imageInfo.blockID && payload) {
               // Disable tab switching during save to prevent SVG dimension errors
-              
+
               try {
                 // 设置 custom-mindmap-image 属性标识这是一个导图图片（不再写入 legacy `custom-mindmap`）
-                await fetchSyncPost('/api/attr/setBlockAttrs', { 
-                  id: imageInfo.blockID, 
-                  attrs: { 
+                await fetchSyncPost('/api/attr/setBlockAttrs', {
+                  id: imageInfo.blockID,
+                  attrs: {
                     'custom-mindmap-image': 'true'
-                  } 
+                  }
                 });
-                
+
                 // After saving data, export image
                 postMessage({ action: 'export_image', type: imageInfo.format });
                 // Notify iframe that save succeeded, so it can trigger save_success event
@@ -1694,20 +1538,20 @@ export default class MindmapPlugin extends Plugin {
             const config = message.config || null;
             if (imageInfo.blockID && config) {
               const { rainbowLinesConfig, ...otherConfig } = config;
-              
+
               // 保存非彩虹线条配置到 custom-mindmap-setting
               if (Object.keys(otherConfig).length > 0) {
-                await fetchSyncPost('/api/attr/setBlockAttrs', { 
-                  id: imageInfo.blockID, 
-                  attrs: { 'custom-mindmap-setting': JSON.stringify(otherConfig) } 
+                await fetchSyncPost('/api/attr/setBlockAttrs', {
+                  id: imageInfo.blockID,
+                  attrs: { 'custom-mindmap-setting': JSON.stringify(otherConfig) }
                 });
               }
-              
+
               // 保存彩虹线条配置到 custom-mindmap-rainbowLinesConfig
               if (rainbowLinesConfig) {
-                await fetchSyncPost('/api/attr/setBlockAttrs', { 
-                  id: imageInfo.blockID, 
-                  attrs: { 'custom-mindmap-rainbowLinesConfig': JSON.stringify(rainbowLinesConfig) } 
+                await fetchSyncPost('/api/attr/setBlockAttrs', {
+                  id: imageInfo.blockID,
+                  attrs: { 'custom-mindmap-rainbowLinesConfig': JSON.stringify(rainbowLinesConfig) }
                 });
               }
             }
@@ -1722,10 +1566,10 @@ export default class MindmapPlugin extends Plugin {
             return;
           }
           imageInfo.data = message.data;
-          
+
           // 注意：思维导图数据现在已经在 simple-mind-map 的 Export 插件中自动写入
           // 不需要在这里再次手动写入
-          
+
           imageInfo.data = that.fixImageContent(imageInfo.data);
           try {
             await that.updateMindmapImage(imageInfo);
@@ -1834,10 +1678,10 @@ export default class MindmapPlugin extends Plugin {
       init() {
         const { mindmapData, blockSettings } = this.data;
         const iframeID = `mindmap-temp-tab-${Date.now()}`;
-        const mindmapURL = that.isBrowser 
+        const mindmapURL = that.isBrowser
           ? `/plugins/${that.name}/mindmap-embed/index.html`
           : `plugins/${that.name}/mindmap-embed/index.html`;
-        
+
         const editTabHTML = `
     <div class="mindmap-edit-tab">
       <div style="padding: 8px 16px; background: var(--b3-theme-surface); border-bottom: 1px solid var(--b3-border-color); color: var(--b3-theme-on-surface);">
@@ -1860,14 +1704,14 @@ export default class MindmapPlugin extends Plugin {
           try {
             const message = JSON.parse(event.data);
             if (!message) return;
-            
+
             if (message.event === 'request_data') {
 
               // 获取彩虹线条配置
               let rainbowLinesConfig: { open: boolean; colorsList?: string[] } = { open: false };
               const defaultRainbowLines = that.data[STORAGE_NAME].defaultRainbowLines || 'none';
               if (defaultRainbowLines !== 'none') {
-                const rainbowOption = that.RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
+                const rainbowOption = RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
                 if (rainbowOption && rainbowOption.list) {
                   rainbowLinesConfig = {
                     open: true,
@@ -1895,11 +1739,11 @@ export default class MindmapPlugin extends Plugin {
                     themeConfig = configStr;
                   }
                 } else {
-                  themeConfig = that.DEFAULT_THEME_CONFIG;
+                  themeConfig = DEFAULT_THEME_CONFIG;
                 }
               } catch (e) {
                 console.warn('Failed to parse theme config, using default');
-                themeConfig = that.DEFAULT_THEME_CONFIG;
+                themeConfig = DEFAULT_THEME_CONFIG;
               }
 
               postMessage({
@@ -1995,7 +1839,7 @@ export default class MindmapPlugin extends Plugin {
     const dialogDestroyCallbacks = [];
 
     // 用于在关闭窗口时触发保存
-    let triggerSaveOnClose = () => {};
+    let triggerSaveOnClose = () => { };
     // 标记是否通过"在标签页中打开"按钮关闭
     let openingInTab = false;
 
@@ -2043,13 +1887,13 @@ export default class MindmapPlugin extends Plugin {
         try {
           const resp = await fetchSyncPost('/api/attr/getBlockAttrs', { id: imageInfo.blockID });
           let mindMapData = null;
-          let mindMapConfig: { rainbowLinesConfig?: any; [key: string]: any } = {};
-          
+          let mindMapConfig: { rainbowLinesConfig?: any;[key: string]: any } = {};
+
           // 检查是否有 custom-mindmap-image 属性（新版本导图图片标识）
           const hasPngAttr = resp && resp.data && resp.data['custom-mindmap-image'] === 'true';
           // 检查是否有 custom-mindmap 属性（旧版本块属性存储）
           const hasOldAttr = resp && resp.data && resp.data['custom-mindmap'];
-          
+
           // 如果是PNG格式，尝试从图片元数据读取
           if (imageInfo.format === 'png' && imageInfo.data) {
             try {
@@ -2065,7 +1909,7 @@ export default class MindmapPlugin extends Plugin {
               console.warn('Failed to read mindmap data from PNG:', e);
             }
           }
-          
+
           // 如果是SVG格式，尝试从图片元数据读取
           if (!mindMapData && imageInfo.format === 'svg' && imageInfo.data) {
             try {
@@ -2077,12 +1921,12 @@ export default class MindmapPlugin extends Plugin {
                 }
                 console.log('Loaded mindmap data from SVG metadata');
               }
-              console.log('SVG data read attempt finished',svgData);
+              console.log('SVG data read attempt finished', svgData);
             } catch (e) {
               console.warn('Failed to read mindmap data from SVG:', e);
             }
           }
-          
+
           // 如果从图片元数据读取失败，尝试从块属性读取（兼容旧版本）
           if (!mindMapData && hasOldAttr) {
             try {
@@ -2090,7 +1934,7 @@ export default class MindmapPlugin extends Plugin {
               console.log('Loaded mindmap data from block attributes (legacy)');
             } catch (e) { mindMapData = null; }
           }
-          
+
           // 如果有 custom-mindmap-image 属性但没有读取到数据，说明图片可能被替换或损坏
           if (hasPngAttr && !mindMapData && !hasOldAttr) {
             // 弹窗提示这不是有效的导图图片
@@ -2106,7 +1950,7 @@ export default class MindmapPlugin extends Plugin {
             });
             return;
           }
-          
+
           // 整合思维导图配置：全局设置 + 块属性设置 + 彩虹线条设置
           // 1. 先加载全局设置作为基础
           let globalConfig = {};
@@ -2114,7 +1958,7 @@ export default class MindmapPlugin extends Plugin {
             globalConfig = JSON.parse(this.data[STORAGE_NAME].globalMindmapSetting || '{}');
           } catch (e) { globalConfig = {}; }
           mindMapConfig = { ...globalConfig, ...mindMapConfig };
-          
+
           // 2. 加载块属性设置（非彩虹线条）- 如果图片元数据中没有配置
           if (resp && resp.data && resp.data['custom-mindmap-setting'] && !mindMapConfig.rainbowLinesConfig) {
             try {
@@ -2122,7 +1966,7 @@ export default class MindmapPlugin extends Plugin {
               mindMapConfig = { ...mindMapConfig, ...blockConfig };
             } catch (e) { /* 忽略解析错误 */ }
           }
-          
+
           // 3. 加载彩虹线条设置 - 如果图片元数据中没有配置
           if (!mindMapConfig.rainbowLinesConfig) {
             if (resp && resp.data && resp.data['custom-mindmap-rainbowLinesConfig']) {
@@ -2134,10 +1978,10 @@ export default class MindmapPlugin extends Plugin {
               // 如果块属性没有彩虹线条配置，使用插件设置的默认彩虹线条
               const defaultRainbowLines = this.data[STORAGE_NAME].defaultRainbowLines || 'none';
               if (defaultRainbowLines !== 'none') {
-                const rainbowOption = this.RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
+                const rainbowOption = RAINBOW_LINES_OPTIONS.find(opt => opt.value === defaultRainbowLines);
                 if (rainbowOption && rainbowOption.list) {
-                  mindMapConfig = { 
-                    ...mindMapConfig, 
+                  mindMapConfig = {
+                    ...mindMapConfig,
                     rainbowLinesConfig: {
                       open: true,
                       colorsList: rainbowOption.list
@@ -2147,7 +1991,7 @@ export default class MindmapPlugin extends Plugin {
               }
             }
           }
-          
+
           postMessage({
             event: 'init_data',
             mindMapData: mindMapData || this.getDefaultMindMapData(),
@@ -2184,16 +2028,16 @@ export default class MindmapPlugin extends Plugin {
         const payload = message.data || null;
         if (imageInfo.blockID && payload) {
           // Disable tab switching during save to prevent SVG dimension errors
-          
+
           try {
             // 设置 custom-mindmap-image 属性标识这是一个导图图片（不再写入 legacy `custom-mindmap`）
-            await fetchSyncPost('/api/attr/setBlockAttrs', { 
-              id: imageInfo.blockID, 
-              attrs: { 
+            await fetchSyncPost('/api/attr/setBlockAttrs', {
+              id: imageInfo.blockID,
+              attrs: {
                 'custom-mindmap-image': 'true'
-              } 
+              }
             });
-            
+
             // After saving data, export image
             postMessage({ action: 'export_image', type: imageInfo.format });
             // Notify iframe that save succeeded, so it can trigger save_success event
@@ -2222,20 +2066,20 @@ export default class MindmapPlugin extends Plugin {
         const config = message.config || null;
         if (imageInfo.blockID && config) {
           const { rainbowLinesConfig, ...otherConfig } = config;
-          
+
           // 保存非彩虹线条配置到 custom-mindmap-setting
           if (Object.keys(otherConfig).length > 0) {
-            await fetchSyncPost('/api/attr/setBlockAttrs', { 
-              id: imageInfo.blockID, 
-              attrs: { 'custom-mindmap-setting': JSON.stringify(otherConfig) } 
+            await fetchSyncPost('/api/attr/setBlockAttrs', {
+              id: imageInfo.blockID,
+              attrs: { 'custom-mindmap-setting': JSON.stringify(otherConfig) }
             });
           }
-          
+
           // 保存彩虹线条配置到 custom-mindmap-rainbowLinesConfig
           if (rainbowLinesConfig) {
-            await fetchSyncPost('/api/attr/setBlockAttrs', { 
-              id: imageInfo.blockID, 
-              attrs: { 'custom-mindmap-rainbowLinesConfig': JSON.stringify(rainbowLinesConfig) } 
+            await fetchSyncPost('/api/attr/setBlockAttrs', {
+              id: imageInfo.blockID,
+              attrs: { 'custom-mindmap-rainbowLinesConfig': JSON.stringify(rainbowLinesConfig) }
             });
           }
         }
@@ -2250,10 +2094,10 @@ export default class MindmapPlugin extends Plugin {
         return;
       }
       imageInfo.data = message.data;
-      
+
       // 注意：思维导图数据现在已经在 simple-mind-map 的 Export 插件中自动写入
       // 不需要在这里再次手动写入
-      
+
       imageInfo.data = this.fixImageContent(imageInfo.data);
       try {
         await this.updateMindmapImage(imageInfo);
