@@ -1246,7 +1246,7 @@ export default class MindmapPlugin extends Plugin {
             mindMapData: {
               root: mindmapData,
               theme: {
-                template: this.getThemeBasedOnSiyuanMode(),
+                template: this.data[STORAGE_NAME].defaultTheme || 'lemonBubbles',
                 config: themeConfig
               },
               smmVersion: "0.14.0-fix.1",
@@ -1260,7 +1260,7 @@ export default class MindmapPlugin extends Plugin {
               // 移除 readonly 限制，允许编辑
             },
             lang: window.siyuan.config.lang === 'zh_CN' ? 'zh' : 'en',
-            localConfig: null,
+            localConfig: this.getInitialLocalConfig(),
             blockSettings: blockSettings // 传递块设置
           }), '*');
         } else if (message.event === 'save') {
@@ -1811,7 +1811,7 @@ export default class MindmapPlugin extends Plugin {
                   // 可编辑但不自动保存
                 },
                 lang: window.siyuan.config.lang === 'zh_CN' ? 'zh' : 'en',
-                localConfig: null,
+                localConfig: that.getInitialLocalConfig(),
                 blockSettings: blockSettings // 传递块设置
               });
             } else if (message.event === 'save') {
