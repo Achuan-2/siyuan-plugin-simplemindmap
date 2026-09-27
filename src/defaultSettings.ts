@@ -1,3 +1,5 @@
+import type { CustomTheme } from './utils/customThemes';
+
 // 默认主题配置
 export const DEFAULT_THEME_CONFIG = {
   "imgMaxWidth": 350,
@@ -202,6 +204,8 @@ export const getDefaultSettings = () => ({
   embedImageFormat: "png",
   editWindow: "dialog",
   defaultTheme: "lemonBubbles",
+  customThemes: [] as CustomTheme[],
+  defaultCustomThemeId: "",
   defaultLayout: "logicalStructure",
   themeConfig: JSON.stringify(DEFAULT_THEME_CONFIG, null, 2),
   defaultRainbowLines: "none",

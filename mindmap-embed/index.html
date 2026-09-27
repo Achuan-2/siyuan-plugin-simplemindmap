@@ -196,7 +196,9 @@
                     ...(data.mindMapConfig || {}),
                     // 每次打开编辑器都展示整张导图，不沿用旧的缩放和偏移。
                     fit: !isBackgroundExport,
-                    viewData: null
+                    viewData: null,
+                    minZoomRatio: 10,
+                    mousewheelZoomRatio: 0.1
                 };
             };
             

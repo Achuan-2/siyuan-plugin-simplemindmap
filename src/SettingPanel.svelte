@@ -7,6 +7,10 @@
     import { getDefaultSettings, DEFAULT_THEME_CONFIG, THEME_LIST, LAYOUT_LIST, RAINBOW_LINES_OPTIONS } from './defaultSettings';
     import { confirm } from 'siyuan';
     import { pushMsg, request } from './api';
+    import ThemeEditor from './ThemeEditor.svelte';
+    import ThemeThumbnail from './ThemeThumbnail.svelte';
+    import { getThemeImagePath } from './utils/themePreview';
+    import { parseThemeConfig, type CustomTheme, type ThemeConfig } from './utils/customThemes';
     export let plugin;
 
     // 使用动态默认设置
@@ -16,12 +20,6 @@
         name: string;
         items: ISettingItem[];
     }
-
-    // 构建主题选项对象
-    const themeOptions = {};
-    THEME_LIST.forEach(theme => {
-        themeOptions[theme.value] = theme.name;
-    });
 
     let groups: ISettingGroup[] = [
         {
@@ -110,6 +108,10 @@
             ]
         },
         {
+            name: '🖌️主题编辑器',
+            items: [{ key: 'customThemeEditor', value: '', type: 'custom', title: '主题编辑器' }]
+        },
+        {
             name: '⚙️全局思维导图设置',
             items: [
                 {
@@ -177,6 +179,20 @@
     ];
 
     let focusGroup = groups[0].name;
+    let themeEditorDirty = false;
+
+    function selectGroup(name: string) {
+        if (name === focusGroup) return;
+        const changeGroup = () => {
+            themeEditorDirty = false;
+            focusGroup = name;
+        };
+        if (themeEditorDirty) {
+            confirm('放弃修改', '当前主题有未保存的修改，确定放弃吗？', changeGroup);
+        } else {
+            changeGroup();
+        }
+    }
     let rainbowDropdownOpen = false;
     let dropdownTrigger: HTMLElement;
     let themeDropdownOpen = false;
@@ -211,15 +227,6 @@
             fontsError = '读取系统字体失败，请重试';
         } finally {
             fontsLoading = false;
-        }
-    }
-
-    function parseThemeConfig(value: string): Record<string, any> | null {
-        try {
-            const config = JSON.parse(value.trim() || '{}');
-            return config && typeof config === 'object' && !Array.isArray(config) ? config : null;
-        } catch {
-            return null;
         }
     }
 
@@ -287,7 +294,7 @@
             }
         }
 
-        settings = { ...settings, themeConfig: JSON.stringify(config, null, 2) };
+        settings = { ...settings, defaultCustomThemeId: '', themeConfig: JSON.stringify(config, null, 2) };
         updateGroupItems();
         await saveSettings();
     }
@@ -296,7 +303,8 @@
         console.log(detail.key, detail.value);
         const setting = settings[detail.key];
         if (setting !== undefined) {
-            settings = { ...settings, [detail.key]: detail.value };
+            settings = { ...settings, [detail.key]: detail.value,
+                ...(detail.key === 'themeConfig' ? { defaultCustomThemeId: '' } : {}) };
             saveSettings();
         }
     };
@@ -328,7 +336,7 @@
 
     async function runload() {
         const loadedSettings = await plugin.loadSettings();
-        settings = { ...loadedSettings };
+        settings = { ...getDefaultSettings(), ...loadedSettings };
         updateGroupItems();
         // 确保设置已保存（可能包含新的默认值）
         await saveSettings();
@@ -354,18 +362,57 @@
     $: selectedRainbowOption = RAINBOW_LINES_OPTIONS.find(opt => opt.value === settings.defaultRainbowLines) || RAINBOW_LINES_OPTIONS[0];
 
     function selectThemeOption(value: string) {
-        settings = { ...settings, defaultTheme: value };
+        const customTheme = settings.customThemes.find(theme => theme.id === value);
+        settings = customTheme ? {
+            ...settings,
+            defaultCustomThemeId: customTheme.id,
+            defaultTheme: customTheme.template,
+            themeConfig: JSON.stringify(customTheme.config, null, 2)
+        } : {
+            ...settings,
+            defaultTheme: value,
+            defaultCustomThemeId: '',
+            themeConfig: settings.defaultCustomThemeId ? JSON.stringify(DEFAULT_THEME_CONFIG, null, 2) : settings.themeConfig
+        };
         themeDropdownOpen = false;
+        updateGroupItems();
         saveSettings();
     }
 
-    $: selectedThemeOption = THEME_LIST.find(opt => opt.value === settings.defaultTheme) || THEME_LIST[0];
+    interface ThemeOption { value: string; name: string; config?: ThemeConfig }
+    $: availableThemes = [
+        ...THEME_LIST,
+        ...settings.customThemes.map(theme => ({ value: theme.id, name: theme.name, config: theme.config }))
+    ] as ThemeOption[];
+    $: selectedThemeValue = settings.defaultCustomThemeId || settings.defaultTheme;
+    $: selectedThemeOption = (availableThemes.find(opt => opt.value === selectedThemeValue) || THEME_LIST[0]) as ThemeOption;
 
-    function getThemeImagePath(themeValue: string): string {
-        // classic8-15 使用 PNG 格式，其他使用 JPG 格式
-        const pngThemes = ['classic8', 'classic9', 'classic10', 'classic11', 'classic12', 'classic13', 'classic14', 'classic15'];
-        const extension = pngThemes.includes(themeValue) ? 'png' : 'jpg';
-        return `plugins/siyuan-plugin-simplemindmap/mindmap-embed/dist/img/${themeValue}.${extension}`;
+    async function saveCustomTheme(theme: CustomTheme, apply: boolean) {
+        const customThemes = settings.customThemes.some(item => item.id === theme.id)
+            ? settings.customThemes.map(item => item.id === theme.id ? theme : item)
+            : [...settings.customThemes, theme];
+        const nextSettings = { ...settings, customThemes };
+        if (apply || settings.defaultCustomThemeId === theme.id) {
+            nextSettings.defaultCustomThemeId = theme.id;
+            nextSettings.defaultTheme = theme.template;
+            nextSettings.themeConfig = JSON.stringify(theme.config, null, 2);
+        }
+        await plugin.saveSettings(nextSettings);
+        settings = nextSettings;
+        updateGroupItems();
+        void pushMsg(apply ? '主题已保存并设为默认，新建导图时生效' : '主题已保存');
+    }
+
+    async function deleteCustomTheme(id: string) {
+        const nextSettings = { ...settings, customThemes: settings.customThemes.filter(theme => theme.id !== id) };
+        if (settings.defaultCustomThemeId === id) {
+            nextSettings.defaultCustomThemeId = '';
+            nextSettings.themeConfig = JSON.stringify(DEFAULT_THEME_CONFIG, null, 2);
+        }
+        await plugin.saveSettings(nextSettings);
+        settings = nextSettings;
+        updateGroupItems();
+        void pushMsg('主题已删除');
     }
 
     let layoutDropdownOpen = false;
@@ -393,9 +440,7 @@
                 data-name="editor"
                 class:b3-list-item--focus={group.name === focusGroup}
                 class="b3-list-item"
-                on:click={() => {
-                    focusGroup = group.name;
-                }}
+                on:click={() => selectGroup(group.name)}
                 on:keydown={() => {}}
             >
                 <span class="b3-list-item__text">{group.name}</span>
@@ -425,11 +470,15 @@
                                     role="button"
                                     tabindex="0"
                                 >
-                                    <img 
-                                        src={getThemeImagePath(selectedThemeOption.value)} 
-                                        alt={selectedThemeOption.name}
-                                        class="theme-preview-img"
-                                    />
+                                    {#if selectedThemeOption.config}
+                                        <ThemeThumbnail config={selectedThemeOption.config} name={selectedThemeOption.name} />
+                                    {:else}
+                                        <img
+                                            src={getThemeImagePath(selectedThemeOption.value)}
+                                            alt={selectedThemeOption.name}
+                                            class="theme-preview-img"
+                                        />
+                                    {/if}
                                     <span class="theme-preview-text">
                                         {selectedThemeOption.name}
                                         <svg class="dropdown-arrow" class:open={themeDropdownOpen} width="12" height="12" viewBox="0 0 12 12">
@@ -450,25 +499,43 @@
                                     width: {themeDropdownTrigger.getBoundingClientRect().width}px;
                                 "
                             >
-                                {#each THEME_LIST as theme}
+                                {#each availableThemes as theme (theme.value)}
                                     <div 
                                         class="theme-dropdown-item" 
-                                        class:selected={settings.defaultTheme === theme.value}
+                                        class:selected={selectedThemeValue === theme.value}
                                         on:click|stopPropagation={() => selectThemeOption(theme.value)}
                                         on:keydown={() => {}}
                                         role="button"
                                         tabindex="0"
                                     >
-                                        <img 
-                                            src={getThemeImagePath(theme.value)} 
-                                            alt={theme.name}
-                                            class="theme-item-img"
-                                        />
-                                        <span class="theme-item-name">{theme.name}</span>
+                                        {#if theme.config}
+                                            <ThemeThumbnail config={theme.config} name={theme.name} />
+                                        {:else}
+                                            <img
+                                                src={getThemeImagePath(theme.value)}
+                                                alt={theme.name}
+                                                class="theme-item-img"
+                                            />
+                                        {/if}
+                                        <span class="theme-item-name">{theme.name}{theme.config ? '（自定义）' : ''}</span>
                                     </div>
                                 {/each}
                             </div>
                         {/if}
+                    {:else if item.key === 'customThemeEditor'}
+                        <ThemeEditor
+                            themes={settings.customThemes}
+                            activeId={settings.defaultCustomThemeId}
+                            defaultTemplate={settings.defaultTheme}
+                            defaultConfig={settings.themeConfig}
+                            fonts={systemFonts}
+                            {fontsLoading}
+                            {fontsError}
+                            retryFonts={loadSystemFonts}
+                            saveTheme={saveCustomTheme}
+                            deleteTheme={deleteCustomTheme}
+                            on:dirty={(event) => themeEditorDirty = event.detail}
+                        />
                     {:else if item.key === 'defaultLayout'}
                         <!-- Custom Layout Dropdown Selector -->
                         <div class="fn__flex b3-label config__item">

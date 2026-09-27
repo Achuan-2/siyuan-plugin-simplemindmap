@@ -18,7 +18,8 @@
     "make_dev_copy": "node --no-warnings ./scripts/make_dev_copy.js"
   },
   "dependencies": {
-    "simple-mind-map": "file:mind-map/simple-mind-map"
+    "simple-mind-map": "file:mind-map/simple-mind-map",
+    "simple-mind-map-plugin-themes": "1.0.1"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3.1.0",
