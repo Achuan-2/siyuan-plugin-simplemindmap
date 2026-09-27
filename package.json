@@ -42,10 +42,5 @@
     "vite": "^5.2.9",
     "vite-plugin-static-copy": "^1.0.2",
     "vite-plugin-zip-pack": "^1.0.5"
-  },
-  "pnpm": {
-    "overrides": {
-      "rollup": "4.52.5"
-    }
   }
 }
