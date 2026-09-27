@@ -52,6 +52,27 @@ const STORAGE_NAME = "config.json";
 const MINDMAP_BLOCK_SELECTOR = "div[data-type='NodeParagraph'][custom-mindmap], div[data-type='NodeParagraph'][custom-mindmap-image]";
 const MINDMAP_IMAGE_SELECTOR = ".img[data-type='img'] img";
 
+type BackgroundImageSaveTask = {
+  imageInfo: MindmapImageInfo;
+  data: any;
+  config: any;
+  signature: string;
+  callbacks: { resolve: (signature: string) => void; reject: (error: Error) => void }[];
+};
+
+type BackgroundImageSaveState = {
+  running: boolean;
+  pending: BackgroundImageSaveTask | null;
+};
+
+type EditorImageSaveState = {
+  lastSignature: string | null;
+  queuedSignature: string | null;
+  pendingSave: Promise<string> | null;
+  config: any;
+  data: any;
+};
+
 export default class MindmapPlugin extends Plugin {
   // Run as mobile
   public isMobile: boolean
@@ -76,6 +97,8 @@ export default class MindmapPlugin extends Plugin {
   // 只合并正在进行的读取，不长期缓存图片，避免同步或外部修改后读到旧数据。
   private _pendingImageRequests = new Map<string, Promise<string>>();
   private _mindmapDialogs = new Set<Dialog>();
+  private _backgroundImageSaves = new Map<string, BackgroundImageSaveState>();
+  private _backgroundExportFrames = new Set<HTMLIFrameElement>();
   private _unloading = false;
 
   public EDIT_TAB_TYPE = "mindmap-edit-tab";
@@ -197,6 +220,8 @@ export default class MindmapPlugin extends Plugin {
     if (this._mouseoverHandler) document.removeEventListener('mouseover', this._mouseoverHandler);
     for (const dialog of this._mindmapDialogs) dialog.destroy();
     this._mindmapDialogs.clear();
+    for (const frame of this._backgroundExportFrames) frame.remove();
+    this._backgroundExportFrames.clear();
     document.querySelectorAll('.label--embed-mindmap').forEach(label => label.remove());
     document.querySelectorAll('.cst-edit-mindmap').forEach(button => {
       const action = button.parentElement;
@@ -541,6 +566,172 @@ export default class MindmapPlugin extends Plugin {
     formData.append("isDir", "false");
     const resp = await fetchSyncPost("/api/file/putFile", formData);
     if (callback) callback(resp);
+    return resp;
+  }
+
+  private getMindmapContentSignature(data: any, config: any): string {
+    // 视图位置和缩放不属于图片内容。
+    return JSON.stringify([data?.root, data?.layout, data?.theme, config?.rainbowLinesConfig]);
+  }
+
+  private exportImageInBackground(data: any, config: any, format: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const frame = document.createElement('iframe');
+      const baseURL = `/plugins/${this.name}/mindmap-embed/index.html`;
+      frame.src = `${baseURL}?backgroundExport=1`;
+      frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:1200px;height:800px;border:0;pointer-events:none;';
+      frame.setAttribute('aria-hidden', 'true');
+      this._backgroundExportFrames.add(frame);
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        window.removeEventListener('message', onMessage);
+        frame.remove();
+        this._backgroundExportFrames.delete(frame);
+      };
+      const fail = (error: Error) => {
+        cleanup();
+        reject(error);
+      };
+      const timeout = window.setTimeout(() => fail(new Error('后台导出思维导图超时')), 60000);
+      const send = (message: any) => {
+        frame.contentWindow?.postMessage(JSON.stringify(message), '*');
+      };
+      const onMessage = (event: MessageEvent) => {
+        if (event.source !== frame.contentWindow || typeof event.data !== 'string') return;
+        let message: any;
+        try {
+          message = JSON.parse(event.data);
+        } catch (error) {
+          return;
+        }
+        if (message.event === 'request_data') {
+          send({
+            event: 'init_data',
+            mindMapData: { ...data, view: null },
+            mindMapConfig: config,
+            lang: getMindmapLanguage(window.siyuan?.config?.lang),
+            localConfig: this.getInitialLocalConfig()
+          });
+        } else if (message.event === 'app_inited') {
+          send({ action: 'export_image', type: format });
+        } else if (message.event === 'export_success') {
+          cleanup();
+          resolve(message.data);
+        } else if (message.event === 'export_error') {
+          fail(new Error(message.error || '后台导出思维导图失败'));
+        }
+      };
+      window.addEventListener('message', onMessage);
+      frame.addEventListener('error', () => fail(new Error('后台导出页面加载失败')), { once: true });
+      document.body.appendChild(frame);
+    });
+  }
+
+  private queueBackgroundImageSave(imageInfo: MindmapImageInfo, data: any, config: any, signature: string): Promise<string> {
+    const key = imageInfo.imageURL;
+    let state = this._backgroundImageSaves.get(key);
+    if (!state) {
+      state = { running: false, pending: null };
+      this._backgroundImageSaves.set(key, state);
+    }
+    return new Promise((resolve, reject) => {
+      const callback = { resolve, reject };
+      if (state.pending) {
+        // 导出过程中发生多次编辑，只保留最新快照，同时通知等待旧快照的调用方。
+        state.pending = {
+          imageInfo, data, config, signature,
+          callbacks: [...state.pending.callbacks, callback]
+        };
+      } else {
+        state.pending = { imageInfo, data, config, signature, callbacks: [callback] };
+      }
+      if (!state.running) void this.runBackgroundImageSaves(key, state);
+    });
+  }
+
+  private async runBackgroundImageSaves(key: string, state: BackgroundImageSaveState): Promise<void> {
+    state.running = true;
+    while (state.pending) {
+      const task = state.pending;
+      state.pending = null;
+      try {
+        if (this._unloading) throw new Error('插件已卸载');
+        const exported = await this.exportImageInBackground(task.data, task.config, task.imageInfo.format);
+        if (typeof exported !== 'string' || !exported.startsWith('data:image/')) {
+          throw new Error('后台导出未返回有效图片');
+        }
+        const savedImage = { ...task.imageInfo, data: this.fixImageContent(exported) };
+        const attrResponse = await fetchSyncPost('/api/attr/setBlockAttrs', {
+          id: task.imageInfo.blockID,
+          attrs: { 'custom-mindmap-image': 'true' }
+        });
+        if (attrResponse?.code !== 0) throw new Error('设置思维导图块属性失败');
+        const imageResponse = await this.updateMindmapImage(savedImage);
+        if (imageResponse?.code !== 0) throw new Error('写入思维导图图片失败');
+        task.imageInfo.data = savedImage.data;
+        void fetch(task.imageInfo.imageURL, { cache: 'reload' }).catch(error => {
+          console.warn('Failed to refresh mindmap image cache:', error);
+        });
+        document.querySelectorAll(`img[data-src='${task.imageInfo.imageURL}']`).forEach(imageElement => {
+          (imageElement as HTMLImageElement).src = task.imageInfo.imageURL;
+          const blockElement = imageElement.closest("div[data-type='NodeParagraph']") as HTMLElement;
+          if (blockElement) this.updateAttrLabel(blockElement);
+        });
+        task.callbacks.forEach(callback => callback.resolve(task.signature));
+      } catch (error) {
+        const saveError = error instanceof Error ? error : new Error(String(error));
+        task.callbacks.forEach(callback => callback.reject(saveError));
+      }
+    }
+    state.running = false;
+    this._backgroundImageSaves.delete(key);
+  }
+
+  private handleEditorImageSave(
+    imageInfo: MindmapImageInfo,
+    message: any,
+    state: EditorImageSaveState,
+    postMessage: (message: any) => void
+  ): void {
+    const payload = message.data;
+    if (!imageInfo.blockID || !payload) return;
+    state.data = payload;
+    const signature = this.getMindmapContentSignature(payload, state.config);
+    const confirmSave = () => {
+      postMessage({ event: 'save_confirmed' });
+      if (message.via === 'manual') {
+        void fetchSyncPost('/api/notification/pushMsg', { msg: '保存成功', timeout: 7000 })
+          .catch(error => console.error('Push notification error:', error));
+      }
+    };
+    if (signature === state.lastSignature && state.queuedSignature === null) {
+      if (message.via === 'manual') confirmSave();
+      return;
+    }
+    if (signature !== state.queuedSignature || !state.pendingSave) {
+      state.queuedSignature = signature;
+      state.pendingSave = this.queueBackgroundImageSave(imageInfo, payload, state.config, signature);
+    }
+    state.pendingSave.then(savedSignature => {
+      state.lastSignature = savedSignature;
+      if (state.queuedSignature === signature) {
+        state.queuedSignature = null;
+        state.pendingSave = null;
+      }
+      confirmSave();
+    }).catch(error => {
+      if (state.queuedSignature === signature) {
+        state.queuedSignature = null;
+        state.pendingSave = null;
+      }
+      console.error('Background mindmap image save failed:', error);
+      if (message.via === 'manual') {
+        void fetchSyncPost('/api/notification/pushErrMsg', {
+          msg: '思维导图图片保存失败', timeout: 7000
+        }).catch(notificationError => console.error('Push notification error:', notificationError));
+      }
+    });
   }
 
   public updateAttrLabel(blockElement: HTMLElement) {
@@ -1441,9 +1632,17 @@ export default class MindmapPlugin extends Plugin {
 
         // 保存 tab 对象的引用，以便在 onInit 中使用
         const customTab = this;
+        const saveState: EditorImageSaveState = {
+          lastSignature: null, queuedSignature: null, pendingSave: null, config: {}, data: null
+        };
 
         const postMessage = (message: any) => {
           if (!iframe.contentWindow) return;
+          if (message.event === 'init_data') {
+            saveState.config = message.mindMapConfig || {};
+            saveState.data = message.mindMapData;
+            saveState.lastSignature = that.getMindmapContentSignature(saveState.data, saveState.config);
+          }
           iframe.contentWindow.postMessage(JSON.stringify(message), '*');
         };
 
@@ -1590,77 +1789,19 @@ export default class MindmapPlugin extends Plugin {
           }
         }
 
-        const onSave = async (message: any) => {
-          // Save mind map data to block attributes
-          try {
-            const payload = message.data || null;
-            if (imageInfo.blockID && payload) {
-              // Disable tab switching during save to prevent SVG dimension errors
-
-              try {
-                // 设置 custom-mindmap-image 属性标识这是一个导图图片（不再写入 legacy `custom-mindmap`）
-                await fetchSyncPost('/api/attr/setBlockAttrs', {
-                  id: imageInfo.blockID,
-                  attrs: {
-                    'custom-mindmap-image': 'true'
-                  }
-                });
-
-                // After saving data, export image
-                postMessage({ action: 'export_image', type: imageInfo.format });
-                // Notify iframe that save succeeded, so it can trigger save_success event
-                postMessage({ event: 'save_confirmed' });
-                // Push a notification to inform user that save succeeded only when it's a manual save (Ctrl+S)
-                try {
-                  if (message && message.via === 'manual') {
-                    await fetchSyncPost('/api/notification/pushMsg', { msg: '保存成功', timeout: 7000 });
-                  }
-                } catch (e) {
-                  console.error('Push notification error:', e);
-                }
-              } catch (err) {
-                console.error('SetBlockAttrs error:', err);
-              }
-            }
-          } catch (err) {
-            console.error('Save error:', err);
-            // Re-enable tab switching even if save fails
-          }
+        const onSave = (message: any) => {
+          that.handleEditorImageSave(imageInfo, message, saveState, postMessage);
         }
 
         const onSaveConfig = async (message: any) => {
           try {
+            saveState.config = message.config || {};
             await that.saveMindmapConfig(imageInfo.blockID, message.config);
+            if (saveState.data) {
+              that.handleEditorImageSave(imageInfo, { data: saveState.data }, saveState, postMessage);
+            }
           } catch (err) {
             console.error('Save config error:', err);
-          }
-        }
-
-        const onExportSuccess = async (message: any) => {
-          // Update image with exported data
-          if (!message.data) {
-            return;
-          }
-          imageInfo.data = message.data;
-
-          // 注意：思维导图数据现在已经在 simple-mind-map 的 Export 插件中自动写入
-          // 不需要在这里再次手动写入
-
-          imageInfo.data = that.fixImageContent(imageInfo.data);
-          try {
-            await that.updateMindmapImage(imageInfo);
-            await fetch(imageInfo.imageURL, { cache: 'reload' });
-            document.querySelectorAll(`img[data-src='${imageInfo.imageURL}']`).forEach(imageElement => {
-              (imageElement as HTMLImageElement).src = imageInfo.imageURL;
-              const blockElement = imageElement.closest("div[data-type='NodeParagraph']") as HTMLElement;
-              if (blockElement) {
-                that.updateAttrLabel(blockElement);
-              }
-            });
-
-          } catch (err) {
-            console.error('Failed to reload image:', err);
-          } finally {
           }
         }
 
@@ -1696,11 +1837,12 @@ export default class MindmapPlugin extends Plugin {
                 // Mind map initialized
                 console.log('Mind map initialized in tab');
               }
+              else if (message.event == 'editor_ready' && message.data && !saveState.pendingSave) {
+                saveState.data = message.data;
+                saveState.lastSignature = that.getMindmapContentSignature(message.data, saveState.config);
+              }
               else if (message.event == 'save') {
                 onSave(message);
-              }
-              else if (message.event == 'export_success') {
-                onExportSuccess(message);
               }
               else if (message.event == 'exit') {
                 onExit(message);
@@ -1742,6 +1884,16 @@ export default class MindmapPlugin extends Plugin {
         window.addEventListener("message", messageEventHandler);
         iframe.contentWindow.addEventListener("keydown", keydownEventHandleer);
         this.beforeDestroy = () => {
+          if (!that._unloading) {
+            try {
+              const mindMap = (iframe.contentWindow as any)?.mindMapInstance;
+              mindMap?.renderer?.textEdit?.hideEditTextBox();
+              const data = mindMap?.getData(true);
+              if (data) that.handleEditorImageSave(imageInfo, { data, via: 'close' }, saveState, () => {});
+            } catch (error) {
+              console.error('Failed to save mindmap tab on close:', error);
+            }
+          }
           window.removeEventListener("message", messageEventHandler);
           iframe.contentWindow.removeEventListener("keydown", keydownEventHandleer);
         };
@@ -1951,14 +2103,29 @@ export default class MindmapPlugin extends Plugin {
     const iframe = dialog.element.querySelector("iframe");
     iframe.focus();
 
+    const saveState: EditorImageSaveState = {
+      lastSignature: null, queuedSignature: null, pendingSave: null, config: {}, data: null
+    };
     const postMessage = (message: any) => {
       if (!iframe.contentWindow) return;
+      if (message.event === 'init_data') {
+        saveState.config = message.mindMapConfig || {};
+        saveState.data = message.mindMapData;
+        saveState.lastSignature = this.getMindmapContentSignature(saveState.data, saveState.config);
+      }
       iframe.contentWindow.postMessage(JSON.stringify(message), '*');
     };
 
     // 设置关闭时触发保存的回调
     triggerSaveOnClose = () => {
-      postMessage({ action: 'save', via: 'close' });
+      try {
+        const mindMap = (iframe.contentWindow as any)?.mindMapInstance;
+        mindMap?.renderer?.textEdit?.hideEditTextBox();
+        const data = mindMap?.getData(true);
+        if (data) this.handleEditorImageSave(imageInfo, { data, via: 'close' }, saveState, () => {});
+      } catch (error) {
+        console.error('Failed to save mindmap dialog on close:', error);
+      }
     };
 
     // 在 simple-mind-map 中，我们通过块属性保存/读取思维导图 JSON
@@ -2100,76 +2267,19 @@ export default class MindmapPlugin extends Plugin {
       }
     }
 
-    const onSave = async (message: any) => {
-      // Save mind map data to block attributes
-      try {
-        const payload = message.data || null;
-        if (imageInfo.blockID && payload) {
-          // Disable tab switching during save to prevent SVG dimension errors
-
-          try {
-            // 设置 custom-mindmap-image 属性标识这是一个导图图片（不再写入 legacy `custom-mindmap`）
-            await fetchSyncPost('/api/attr/setBlockAttrs', {
-              id: imageInfo.blockID,
-              attrs: {
-                'custom-mindmap-image': 'true'
-              }
-            });
-
-            // After saving data, export image
-            postMessage({ action: 'export_image', type: imageInfo.format });
-            // Notify iframe that save succeeded, so it can trigger save_success event
-            postMessage({ event: 'save_confirmed' });
-            // Push a notification to inform user that save succeeded only when it's a manual save (Ctrl+S)
-            try {
-              if (message && message.via === 'manual') {
-                await fetchSyncPost('/api/notification/pushMsg', { msg: '保存成功', timeout: 7000 });
-              }
-            } catch (e) {
-              console.error('Push notification error:', e);
-            }
-          } catch (err) {
-            console.error('SetBlockAttrs error:', err);
-          }
-        }
-      } catch (err) {
-        console.error('Save error:', err);
-        // Re-enable tab switching even if save fails
-      }
+    const onSave = (message: any) => {
+      this.handleEditorImageSave(imageInfo, message, saveState, postMessage);
     }
 
     const onSaveConfig = async (message: any) => {
       try {
+        saveState.config = message.config || {};
         await this.saveMindmapConfig(imageInfo.blockID, message.config);
+        if (saveState.data) {
+          this.handleEditorImageSave(imageInfo, { data: saveState.data }, saveState, postMessage);
+        }
       } catch (err) {
         console.error('Save config error:', err);
-      }
-    }
-
-    const onExportSuccess = async (message: any) => {
-      // Update image with exported data
-      if (!message.data) {
-        return;
-      }
-      imageInfo.data = message.data;
-
-      // 注意：思维导图数据现在已经在 simple-mind-map 的 Export 插件中自动写入
-      // 不需要在这里再次手动写入
-
-      imageInfo.data = this.fixImageContent(imageInfo.data);
-      try {
-        await this.updateMindmapImage(imageInfo);
-        await fetch(imageInfo.imageURL, { cache: 'reload' });
-        document.querySelectorAll(`img[data-src='${imageInfo.imageURL}']`).forEach(imageElement => {
-          (imageElement as HTMLImageElement).src = imageInfo.imageURL;
-          const blockElement = imageElement.closest("div[data-type='NodeParagraph']") as HTMLElement;
-          if (blockElement) {
-            this.updateAttrLabel(blockElement);
-          }
-        });
-      } catch (err) {
-        console.error('Failed to reload image:', err);
-      } finally {
       }
     }
 
@@ -2206,11 +2316,12 @@ export default class MindmapPlugin extends Plugin {
             // Mind map initialized
             console.log('Mind map initialized in dialog');
           }
+          else if (message.event == 'editor_ready' && message.data && !saveState.pendingSave) {
+            saveState.data = message.data;
+            saveState.lastSignature = this.getMindmapContentSignature(message.data, saveState.config);
+          }
           else if (message.event == 'save') {
             onSave(message);
-          }
-          else if (message.event == 'export_success') {
-            onExportSuccess(message);
           }
           else if (message.event == 'exit') {
             onExit(message);
