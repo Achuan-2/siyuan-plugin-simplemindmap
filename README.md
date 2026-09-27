@@ -10,7 +10,6 @@
 
 ![](https://fastly.jsdelivr.net/gh/Achuan-2/PicBed/assets/20251207122625-2025-12-07.png)
 
-
 > ❓**为什么不直接保存思维导图文件而选择每次编辑自动保存为图片呢？**
 >
 > 1. 永久保留。即使你卸载了插件，或者以后不用思源笔记，不用思绪思维导图，画的图也不用怕丢失，不用怕打开的笔记显示不出思维导图。
@@ -117,7 +116,7 @@
 
 - 思维导图导出为png、svg图片时，思维导图数据会自动写入图片的元数据中，之后可以直接把图片再导入为思维导图进行编辑，或者直接粘贴进思源进行编辑
 - 思维导图节点右键「复制该节点为思源图片（可编辑）」，图片也会保留思维导图数据，这样你可以快速复制某个节点为图片，进行再编辑
-   
+
   ![](https://fastly.jsdelivr.net/gh/Achuan-2/PicBed/assets/20251208121347-2025-12-08.png)
 
 **插件如何识别图片是思维导图图片**：
@@ -131,25 +130,25 @@
 可配置
 
 - 基础设置
+
   - 渲染思维导图窗口是弹窗还是标签页
   - 图片保存格式是png还是svg
   - 是否给导图块显示导图标签
-  
+
   ![](https://fastly.jsdelivr.net/gh/Achuan-2/PicBed/assets/20251210204250-2025-12-10.png)
 - 样式设置
+
   - 设置思维导图默认主题，设置主题自定义配置
   - 设置思维导图默认结构
   - 设置思维导图是否开启彩虹线条
-  
+
   ![](https://fastly.jsdelivr.net/gh/Achuan-2/PicBed/assets/20251210204230-2025-12-10.png)
 - 全局思维导图设置：开启水印、性能模式等设置
-
-
-
 
 ## 4 📝 插件会创建的自定义属性
 
 插件创建的导图块会添加自定义属性
+
 - `custom-mindmap-image`: bool, 标记该块是思维导图图片块
 - `custom-mindmap-setting`: json，存储思维导图的设置数据
 - `custom-mindmap-rainbowlinesconfig`: json，存储彩虹线条的配置数据
@@ -163,8 +162,6 @@ git clone --recursive https://github.com/Achuan-2/siyuan-plugin-simplemindmap.gi
 cd mind-map/web && npm install && npm run build
 cd ../.. && npm install && npm run build
 ```
-
-
 
 ## 6 ❤️ 致谢
 
@@ -186,7 +183,5 @@ cd ../.. && npm install && npm run build
 维护插件费时费力，个人时间和精力有限，开源只是分享，不等于我要浪费我的时间免费帮用户实现ta需要的功能，
 
 我需要的功能我会慢慢改进（打赏可以催更），有些我觉得可以改进、但是现阶段不必要的功能需要打赏才改进（会标注打赏标签和需要打赏金额），而不需要的功能、实现很麻烦的功能会直接关闭issue不考虑实现，我没实现的功能欢迎有大佬来pr
-
-累积赞赏50元的朋友如果想加我微信，可以在赞赏的时候备注微信号，或者发邮件到achuan-2@outlook.com来进行好友申请
 
 <img alt="image" src="https://fastly.jsdelivr.net/gh/Achuan-2/PicBed@pic/assets/network-asset-network-asset-image-20250614123558-fuhir5v.png" />
