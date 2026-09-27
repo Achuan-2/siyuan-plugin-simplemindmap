@@ -1,21 +1,35 @@
+## v2.4.0 / 20260927
+
+- 🎨思源导图设置-外观样式优化
+
+  - 支持自定义思维导图字体
+  - 支持主题字号与连线粗细设置并调整默认值
+- 🎨 性能优化
+
 ## v2.3.6 / 20251212
+
 - 🎨笔记转导图支持是否添加思源超链接
 - 🐛修复笔记转导图右键菜单失效问题
 
 ## v2.3.5 / 20251211
+
 - 🎨 支持设置跟随思源主题
 
 ## v2.3.4 / 20251211
+
 - 🐛 优化新建导图，有块属性的块新建导图，不应该报错，还会导致主题设置失败
 
 ## v2.3.3 / 20251211
+
 - 🎨 思维导图连线风格支持括号连线
 
 ## v2.3.2/20251211
+
 - 🎨 思维导图连线风格连线添加圆弧样式
 - 🐛 优化空内容新输入文字，预览文字变形
 
 ## v2.3.1/20251210
+
 - 🎨 默认主题配置修改，连线用曲线
 - 🐛 修复右键菜单转导图没有初始化主题配置
 - 💻 把可用主题、结构、彩虹条放在defaultSettings.ts里
@@ -37,19 +51,16 @@
 
 - ✨块菜单添加内容转导图功能，支持单个块和批量块转导图
 
-
 ## v2.0.0 / 20251207
-
 
 - ✨ 支持导出的png/svg依然可再导入编辑 [#47](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/47)
 - 🎨 新建子节点不填充文字 [#49](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/49)
 
-
 ## v1.9.2 / 20251207
+
 - 🎨 斜杆菜单插入的按钮id改为simplemindmap
 
 ## v1.9.0 / 20251207
-
 
 - 🎨 文档树和文档块标支持文档大纲转导图
 - 🎨 将【设置】里的参数值存储为全局设置，打开导图/创建导图自动生效 [#46](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/46)
@@ -70,6 +81,7 @@
 - 🐛绑定了块不显示刷新按钮问题
 
 ## v1.7.0 / 20251206
+
 - 🎨笔记转导图支持子文档转思维导图  [#42](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/42)
 
 ## v1.6.1 / 20251206
@@ -90,12 +102,14 @@
 - 🎨优化图片右上角编辑按钮对其他插件的兼容性 [#39](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/39)
 
 ## v1.5.0 / 20251205
+
 - 🎨 支持设置是否启用彩虹线条 [#38](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/38)
 - 🎨彩虹线条和导图设置保存在块属性里[#36](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/36) [#28](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/28)
 - 🎨 dialog模式支持在新标签打开
-## v1.4.0 / 20251205
-- 🎨节点块链接如果是思源块链接支持悬浮预览思源内容 [#30](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/30)
 
+## v1.4.0 / 20251205
+
+- 🎨节点块链接如果是思源块链接支持悬浮预览思源内容 [#30](https://github.com/Achuan-2/siyuan-embed-mindmap/issues/30)
 
 ## v1.3.0 / 20251205
 
@@ -119,10 +133,9 @@
 - 🎨 大纲复制Markdown功能，需要支持加粗、斜体等复制 [#13](https://github.com/Achuan-2/siyuan-plugin-simplemindmap/issues/13)
 - 🐛 第一次拖动图片突然变大问题，优化第一次粘贴图片的默认大小
 
-    粘贴图片后，第一次拖动图片大小会变得非常大，原因是节点没有根据存储的imageSize渲染，拖动的时候添加custom参数后才突然按照imageSize渲染
+  粘贴图片后，第一次拖动图片大小会变得非常大，原因是节点没有根据存储的imageSize渲染，拖动的时候添加custom参数后才突然按照imageSize渲染
 - 🎨主题修改：根节点取消圆角矩形
 - 🎨 修复png导出问题，完善设置、斜杆菜单
-
 
 ## v1.1.1 / 20251126
 
