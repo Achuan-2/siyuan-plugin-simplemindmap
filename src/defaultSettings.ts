@@ -2,16 +2,18 @@
 export const DEFAULT_THEME_CONFIG = {
   "imgMaxWidth": 350,
   "imgMaxHeight": 200,
+  "lineWidth": 2,
   "root": {
+    "fontSize": 48,
     "shape": "rectangle"
   },
   "second": {
-    "fontSize": 24,
+    "fontSize": 32,
     "shape": "rectangle",
     "marginY": 16
   },
   "node": {
-    "fontSize": 24,
+    "fontSize": 32,
     "borderColor": "#4D4D4D",
     "borderWidth": 2,
     "marginY": 16

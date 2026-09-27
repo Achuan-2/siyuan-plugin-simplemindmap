@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import SettingPanel from '@/libs/components/setting-panel.svelte';
-    import { getDefaultSettings, THEME_LIST, LAYOUT_LIST, RAINBOW_LINES_OPTIONS } from './defaultSettings';
+    import { getDefaultSettings, DEFAULT_THEME_CONFIG, THEME_LIST, LAYOUT_LIST, RAINBOW_LINES_OPTIONS } from './defaultSettings';
     import { confirm } from 'siyuan';
     import { pushMsg } from './api';
     export let plugin;
@@ -189,6 +189,68 @@
         group: string;
         key: string;
         value: any;
+    }
+
+    const fontSizeLevels = [
+        { key: 'root', title: '根节点（root）字体大小' },
+        { key: 'second', title: '二级节点（second）字体大小' },
+        { key: 'node', title: '普通节点（node）字体大小' }
+    ] as const;
+    let themeNumberItems: ISettingItem[] = [];
+
+    function parseThemeConfig(value: string): Record<string, any> | null {
+        try {
+            const config = JSON.parse(value.trim() || '{}');
+            return config && typeof config === 'object' && !Array.isArray(config) ? config : null;
+        } catch {
+            return null;
+        }
+    }
+
+    $: parsedThemeConfig = parseThemeConfig(settings.themeConfig);
+    $: themeNumberItems = [
+        ...fontSizeLevels.map(({ key, title }): ISettingItem => ({
+            key,
+            title,
+            type: 'number',
+            value: parsedThemeConfig?.[key]?.fontSize ?? DEFAULT_THEME_CONFIG[key].fontSize,
+            description: `设置主题配置中的 ${key}.fontSize，单位为 px`
+        })),
+        {
+            key: 'lineWidth',
+            title: '连线粗细',
+            type: 'number',
+            value: parsedThemeConfig?.lineWidth ?? DEFAULT_THEME_CONFIG.lineWidth,
+            description: '设置主题配置中的 lineWidth，单位为 px'
+        }
+    ];
+
+    async function onThemeNumberChanged({ detail }: CustomEvent<ChangeEvent>) {
+        const config = parseThemeConfig(settings.themeConfig);
+        const title = detail.key === 'lineWidth' ? '连线粗细' : '字体大小';
+        if (!config || !Number.isFinite(detail.value) || detail.value <= 0) {
+            // 重新生成输入框的值，避免显示未保存的配置。
+            settings = { ...settings };
+            await pushMsg(config ? `${title}必须为大于 0 的数字` : '请先将主题配置修改为有效的 JSON 对象');
+            return;
+        }
+
+        if (detail.key === 'lineWidth') {
+            config.lineWidth = detail.value;
+        } else {
+            const nodeConfig = config[detail.key];
+            if (nodeConfig !== undefined && (!nodeConfig || typeof nodeConfig !== 'object' || Array.isArray(nodeConfig))) {
+                settings = { ...settings };
+                await pushMsg(`请先将主题配置中的 ${detail.key} 修改为有效的 JSON 对象`);
+                return;
+            }
+
+            config[detail.key] = { ...nodeConfig, fontSize: detail.value };
+        }
+
+        settings = { ...settings, themeConfig: JSON.stringify(config, null, 2) };
+        updateGroupItems();
+        await saveSettings();
     }
 
     const onChanged = ({ detail }: CustomEvent<ChangeEvent>) => {
@@ -497,6 +559,19 @@
                                 {/each}
                             </div>
                         {/if}
+                    {:else if item.key === 'themeConfig'}
+                        <SettingPanel
+                            group={currentGroup.name}
+                            settingItems={themeNumberItems}
+                            display={true}
+                            on:changed={onThemeNumberChanged}
+                        />
+                        <SettingPanel
+                            group={currentGroup.name}
+                            settingItems={[item]}
+                            display={true}
+                            on:changed={onChanged}
+                        />
                     {:else}
                         <!-- Standard Form Items -->
                         <SettingPanel
