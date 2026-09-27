@@ -17,7 +17,7 @@
   },
   "description": {
     "default": "Automatically save mind maps as images, support image re-editing, support binding maps to blocks, and automatically update content.",
-    "zh_CN": "自动保存思维导图为图片，支持图片二次编辑，支持导图与块绑定获取笔记内容、支持文档大纲、文档内容、文档树转导图"
+    "zh_CN": "嵌入式思维导图，支持图片二次编辑，支持导图与块绑定获取笔记内容、支持文档大纲、文档内容、文档树转导图"
   },
   "readme": {
     "default": "README_EN.md",
