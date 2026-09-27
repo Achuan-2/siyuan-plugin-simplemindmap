@@ -1,5 +1,17 @@
 let pluginInstance: any = null;
 
+/** 将思源的 BCP 47 或旧版语言代码转换为导图支持的语言。 */
+export function getMindmapLanguage(language?: string): 'zh' | 'zhtw' | 'en' | 'vi' {
+    const normalized = (language || 'zh').trim().replace(/_/g, '-').toLowerCase();
+    const parts = normalized.split('-');
+    if (normalized === 'zhtw' || parts[0] === 'zh') {
+        return normalized === 'zhtw' || parts.some(part => ['tw', 'hk', 'mo', 'hant', 'cht'].includes(part))
+            ? 'zhtw'
+            : 'zh';
+    }
+    return parts[0] === 'vi' ? 'vi' : 'en';
+}
+
 // 设置插件实例的引用
 export function setPluginInstance(plugin: any) {
     pluginInstance = plugin;

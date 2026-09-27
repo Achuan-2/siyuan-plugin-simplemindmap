@@ -31,6 +31,7 @@ import {
   writeMindMapDataToSVG,
 } from "./utils";
 import { matchHotKey } from "./utils/hotkey";
+import { getMindmapLanguage } from "./utils/i18n";
 import { importOutline, importDocTree, importContent } from "../mind-map/web/src/utils/noteImport";
 import SettingPanel from "./SettingPanel.svelte";
 import { getDefaultSettings, DEFAULT_THEME_CONFIG, RAINBOW_LINES_OPTIONS, normalizeThemeFontSizes } from "./defaultSettings";
@@ -1311,7 +1312,7 @@ export default class MindmapPlugin extends Plugin {
               rainbowLinesConfig: rainbowLinesConfig
               // 移除 readonly 限制，允许编辑
             },
-            lang: window.siyuan.config.lang === 'zh_CN' ? 'zh' : 'en',
+            lang: getMindmapLanguage(window.siyuan?.config?.lang),
             localConfig: this.getInitialLocalConfig(),
             blockSettings: blockSettings // 传递块设置
           }), '*');
@@ -1566,7 +1567,7 @@ export default class MindmapPlugin extends Plugin {
                 event: 'init_data',
                 mindMapData: mindMapData || that.getDefaultMindMapData(),
                 mindMapConfig: mindMapConfig,
-                lang: window.siyuan.config.lang.split('_')[0] || 'zh',
+                lang: getMindmapLanguage(window.siyuan?.config?.lang),
                 localConfig: that.getInitialLocalConfig()
               });
             } catch (err) {
@@ -1574,7 +1575,7 @@ export default class MindmapPlugin extends Plugin {
                 event: 'init_data',
                 mindMapData: that.getDefaultMindMapData(),
                 mindMapConfig: {},
-                lang: window.siyuan.config.lang.split('_')[0] || 'zh',
+                lang: getMindmapLanguage(window.siyuan?.config?.lang),
                 localConfig: that.getInitialLocalConfig()
               });
             }
@@ -1583,7 +1584,7 @@ export default class MindmapPlugin extends Plugin {
               event: 'init_data',
               mindMapData: that.getDefaultMindMapData(),
               mindMapConfig: {},
-              lang: window.siyuan.config.lang.split('_')[0] || 'zh',
+              lang: getMindmapLanguage(window.siyuan?.config?.lang),
               localConfig: that.getInitialLocalConfig()
             });
           }
@@ -1840,7 +1841,7 @@ export default class MindmapPlugin extends Plugin {
                   rainbowLinesConfig: rainbowLinesConfig
                   // 可编辑但不自动保存
                 },
-                lang: window.siyuan.config.lang === 'zh_CN' ? 'zh' : 'en',
+                lang: getMindmapLanguage(window.siyuan?.config?.lang),
                 localConfig: that.getInitialLocalConfig(),
                 blockSettings: blockSettings // 传递块设置
               });
@@ -2073,7 +2074,7 @@ export default class MindmapPlugin extends Plugin {
             event: 'init_data',
             mindMapData: mindMapData || this.getDefaultMindMapData(),
             mindMapConfig: mindMapConfig,
-            lang: window.siyuan.config.lang.split('_')[0] || 'zh',
+            lang: getMindmapLanguage(window.siyuan?.config?.lang),
             localConfig: this.getInitialLocalConfig(),
             imageUrl: imageInfo.imageURL
           });
@@ -2082,7 +2083,7 @@ export default class MindmapPlugin extends Plugin {
             event: 'init_data',
             mindMapData: this.getDefaultMindMapData(),
             mindMapConfig: {},
-            lang: window.siyuan.config.lang.split('_')[0] || 'zh',
+            lang: getMindmapLanguage(window.siyuan?.config?.lang),
             localConfig: this.getInitialLocalConfig(),
             imageUrl: imageInfo.imageURL
           });
@@ -2092,7 +2093,7 @@ export default class MindmapPlugin extends Plugin {
           event: 'init_data',
           mindMapData: this.getDefaultMindMapData(),
           mindMapConfig: {},
-          lang: window.siyuan.config.lang.split('_')[0] || 'zh',
+          lang: getMindmapLanguage(window.siyuan?.config?.lang),
           localConfig: this.getInitialLocalConfig(),
           imageUrl: imageInfo.imageURL
         });
