@@ -192,7 +192,12 @@
             
             // 获取思维导图配置
             window.takeOverAppMethods.getMindMapConfig = () => {
-                return data.mindMapConfig;
+                return {
+                    ...(data.mindMapConfig || {}),
+                    // 每次打开编辑器都展示整张导图，不沿用旧的缩放和偏移。
+                    fit: !isBackgroundExport,
+                    viewData: null
+                };
             };
             
             // 保存思维导图配置
