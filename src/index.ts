@@ -33,7 +33,7 @@ import {
 import { matchHotKey } from "./utils/hotkey";
 import { importOutline, importDocTree, importContent } from "../mind-map/web/src/utils/noteImport";
 import SettingPanel from "./SettingPanel.svelte";
-import { getDefaultSettings, DEFAULT_THEME_CONFIG, RAINBOW_LINES_OPTIONS } from "./defaultSettings";
+import { getDefaultSettings, DEFAULT_THEME_CONFIG, RAINBOW_LINES_OPTIONS, normalizeThemeFontSizes } from "./defaultSettings";
 
 let PluginInfo = {
   version: '',
@@ -239,6 +239,10 @@ export default class MindmapPlugin extends Plugin {
         this.data[STORAGE_NAME][key] = defaultSettings[key];
       }
     });
+    const themeConfig = normalizeThemeFontSizes(this.data[STORAGE_NAME].themeConfig);
+    if (themeConfig !== this.data[STORAGE_NAME].themeConfig) {
+      await this.saveSettings({ ...this.data[STORAGE_NAME], themeConfig });
+    }
   }
 
   /**
@@ -247,13 +251,15 @@ export default class MindmapPlugin extends Plugin {
   async loadSettings() {
     const settings = await this.loadData(STORAGE_NAME);
     const defaultSettings = getDefaultSettings();
-    return { ...defaultSettings, ...settings };
+    const mergedSettings = { ...defaultSettings, ...settings };
+    return { ...mergedSettings, themeConfig: normalizeThemeFontSizes(mergedSettings.themeConfig) };
   }
 
   /**
    * 保存设置
    */
   async saveSettings(settings: any) {
+    settings = { ...settings, themeConfig: normalizeThemeFontSizes(settings.themeConfig) };
     this.data[STORAGE_NAME] = settings;
     await this.saveData(STORAGE_NAME, settings);
   }

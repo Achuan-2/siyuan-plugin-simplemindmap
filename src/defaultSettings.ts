@@ -23,6 +23,29 @@ export const DEFAULT_THEME_CONFIG = {
   "showLineMarker": false
 };
 
+/** 补齐旧字体配置中缺失的字号，保持与设置面板显示的默认值一致。 */
+export function normalizeThemeFontSizes(value: string): string {
+  if (typeof value !== 'string') return value;
+  try {
+    const config = JSON.parse(value.trim() || '{}');
+    if (!config || typeof config !== 'object' || Array.isArray(config)) return value;
+    let changed = false;
+    for (const level of ['root', 'second', 'node'] as const) {
+      const nodeConfig = config[level];
+      if (nodeConfig && typeof nodeConfig === 'object' && !Array.isArray(nodeConfig)
+        && typeof nodeConfig.fontFamily === 'string' && nodeConfig.fontFamily.trim()
+        && nodeConfig.fontSize == null) {
+        nodeConfig.fontSize = DEFAULT_THEME_CONFIG[level].fontSize;
+        changed = true;
+      }
+    }
+    return changed ? JSON.stringify(config, null, 2) : value;
+  } catch {
+    // 非法 JSON 交给设置面板校验，不覆盖用户正在编辑的内容。
+    return value;
+  }
+}
+
 // 可用的思维导图主题列表
 export const THEME_LIST = [
   { value: 'default', name: '默认主题' },

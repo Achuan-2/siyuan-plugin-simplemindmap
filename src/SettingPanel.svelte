@@ -1,9 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import SettingPanel from '@/libs/components/setting-panel.svelte';
+    import { FormWrap } from '@/libs/components/Form';
+    import FontFamilySelect from '@/libs/components/font-family-select.svelte';
+    import { normalizeSystemFonts, type FontFamilyOption } from '@/utils/systemFonts';
     import { getDefaultSettings, DEFAULT_THEME_CONFIG, THEME_LIST, LAYOUT_LIST, RAINBOW_LINES_OPTIONS } from './defaultSettings';
     import { confirm } from 'siyuan';
-    import { pushMsg } from './api';
+    import { pushMsg, request } from './api';
     export let plugin;
 
     // 使用动态默认设置
@@ -180,17 +183,36 @@
     let themeDropdownTrigger: HTMLElement;
 
     interface ChangeEvent {
-        group: string;
+        group?: string;
         key: string;
         value: any;
     }
 
-    const fontSizeLevels = [
-        { key: 'root', title: '根节点（root）字体大小' },
-        { key: 'second', title: '二级节点（second）字体大小' },
-        { key: 'node', title: '普通节点（node）字体大小' }
+    const nodeStyleLevels = [
+        { key: 'root', title: '根节点（root）' },
+        { key: 'second', title: '二级节点（second）' },
+        { key: 'node', title: '普通节点（node）' }
     ] as const;
-    let themeNumberItems: ISettingItem[] = [];
+    let themeStyleItems: ISettingItem[] = [];
+
+    let systemFonts: FontFamilyOption[] = [];
+    let fontsLoading = false;
+    let fontsError = '';
+
+    async function loadSystemFonts() {
+        if (fontsLoading) return;
+        fontsLoading = true;
+        fontsError = '';
+        try {
+            systemFonts = normalizeSystemFonts(await request('/api/system/getSysFonts', {}));
+            if (!systemFonts.length) fontsError = '未读取到系统字体';
+        } catch (error) {
+            console.warn('读取系统字体失败', error);
+            fontsError = '读取系统字体失败，请重试';
+        } finally {
+            fontsLoading = false;
+        }
+    }
 
     function parseThemeConfig(value: string): Record<string, any> | null {
         try {
@@ -202,14 +224,23 @@
     }
 
     $: parsedThemeConfig = parseThemeConfig(settings.themeConfig);
-    $: themeNumberItems = [
-        ...fontSizeLevels.map(({ key, title }): ISettingItem => ({
-            key,
-            title,
-            type: 'number',
-            value: parsedThemeConfig?.[key]?.fontSize ?? DEFAULT_THEME_CONFIG[key].fontSize,
-            description: `设置主题配置中的 ${key}.fontSize，单位为 px`
-        })),
+    $: themeStyleItems = [
+        ...nodeStyleLevels.flatMap(({ key, title }): ISettingItem[] => [
+            {
+                key: `${key}.fontFamily`,
+                title: `${title}字体`,
+                type: 'custom',
+                value: typeof parsedThemeConfig?.[key]?.fontFamily === 'string' ? parsedThemeConfig[key].fontFamily : '',
+                description: '选择电脑已安装的字体，支持搜索；选择“主题默认字体”可恢复默认，新建导图时生效'
+            },
+            {
+                key: `${key}.fontSize`,
+                title: `${title}字体大小`,
+                type: 'number',
+                value: parsedThemeConfig?.[key]?.fontSize ?? DEFAULT_THEME_CONFIG[key].fontSize,
+                description: `设置主题配置中的 ${key}.fontSize，单位为 px`
+            }
+        ]),
         {
             key: 'lineWidth',
             title: '连线粗细',
@@ -219,10 +250,12 @@
         }
     ];
 
-    async function onThemeNumberChanged({ detail }: CustomEvent<ChangeEvent>) {
+    async function onThemeStyleChanged({ detail }: CustomEvent<ChangeEvent>) {
         const config = parseThemeConfig(settings.themeConfig);
+        const [level, property] = detail.key.split('.');
+        const isFontFamily = property === 'fontFamily';
         const title = detail.key === 'lineWidth' ? '连线粗细' : '字体大小';
-        if (!config || !Number.isFinite(detail.value) || detail.value <= 0) {
+        if (!config || (!isFontFamily && (!Number.isFinite(detail.value) || detail.value <= 0))) {
             // 重新生成输入框的值，避免显示未保存的配置。
             settings = { ...settings };
             await pushMsg(config ? `${title}必须为大于 0 的数字` : '请先将主题配置修改为有效的 JSON 对象');
@@ -232,14 +265,26 @@
         if (detail.key === 'lineWidth') {
             config.lineWidth = detail.value;
         } else {
-            const nodeConfig = config[detail.key];
+            const nodeConfig = config[level];
             if (nodeConfig !== undefined && (!nodeConfig || typeof nodeConfig !== 'object' || Array.isArray(nodeConfig))) {
                 settings = { ...settings };
-                await pushMsg(`请先将主题配置中的 ${detail.key} 修改为有效的 JSON 对象`);
+                await pushMsg(`请先将主题配置中的 ${level} 修改为有效的 JSON 对象`);
                 return;
             }
 
-            config[detail.key] = { ...nodeConfig, fontSize: detail.value };
+            // 面板显示的默认字号也必须写入配置，否则只设置字体时会回退到主题字号。
+            config[level] = { ...nodeConfig, fontSize: nodeConfig?.fontSize ?? DEFAULT_THEME_CONFIG[level].fontSize };
+            if (isFontFamily) {
+                const fontFamily = detail.value.trim();
+                // 删除覆盖值，让导图引擎使用当前主题的默认字体。
+                if (fontFamily) {
+                    config[level].fontFamily = fontFamily;
+                } else {
+                    delete config[level].fontFamily;
+                }
+            } else {
+                config[level].fontSize = detail.value;
+            }
         }
 
         settings = { ...settings, themeConfig: JSON.stringify(config, null, 2) };
@@ -260,10 +305,12 @@
         await plugin.saveSettings(settings);
     }
 
-    onMount(async () => {
-        await runload();
+    onMount(() => {
+        void loadSystemFonts();
+        void runload();
         // Close dropdown when clicking outside
         document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
     });
 
     function handleClickOutside(event: MouseEvent) {
@@ -554,12 +601,28 @@
                             </div>
                         {/if}
                     {:else if item.key === 'themeConfig'}
-                        <SettingPanel
-                            group={currentGroup.name}
-                            settingItems={themeNumberItems}
-                            display={true}
-                            on:changed={onThemeNumberChanged}
-                        />
+                        {#each themeStyleItems as styleItem (styleItem.key)}
+                            {#if styleItem.key.endsWith('.fontFamily')}
+                                <FormWrap title={styleItem.title} description={styleItem.description}>
+                                    <FontFamilySelect
+                                        id={styleItem.key}
+                                        value={styleItem.value}
+                                        fonts={systemFonts}
+                                        loading={fontsLoading}
+                                        error={fontsError}
+                                        on:changed={onThemeStyleChanged}
+                                        on:retry={loadSystemFonts}
+                                    />
+                                </FormWrap>
+                            {:else}
+                                <SettingPanel
+                                    group={currentGroup.name}
+                                    settingItems={[styleItem]}
+                                    display={true}
+                                    on:changed={onThemeStyleChanged}
+                                />
+                            {/if}
+                        {/each}
                         <SettingPanel
                             group={currentGroup.name}
                             settingItems={[item]}
