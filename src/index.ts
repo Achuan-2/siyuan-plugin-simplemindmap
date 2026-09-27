@@ -48,6 +48,8 @@ const {
 } = PluginInfo
 
 const STORAGE_NAME = "config.json";
+const MINDMAP_BLOCK_SELECTOR = "div[data-type='NodeParagraph'][custom-mindmap], div[data-type='NodeParagraph'][custom-mindmap-image]";
+const MINDMAP_IMAGE_SELECTOR = ".img[data-type='img'] img";
 
 export default class MindmapPlugin extends Plugin {
   // Run as mobile
@@ -70,54 +72,49 @@ export default class MindmapPlugin extends Plugin {
   private _openMenuDoctreeHandler;
   private _clickEditorTitleIconHandler;
   private _clickBlockIconHandler;
+  // 只合并正在进行的读取，不长期缓存图片，避免同步或外部修改后读到旧数据。
+  private _pendingImageRequests = new Map<string, Promise<string>>();
+  private _mindmapDialogs = new Set<Dialog>();
+  private _unloading = false;
 
   public EDIT_TAB_TYPE = "mindmap-edit-tab";
   public TEMP_TAB_TYPE = "mindmap-temp-tab";
 
   async onload() {
+    this._unloading = false;
     // 添加自定义思维导图图标
     this.addIcons(`<symbol id="iconSimpleMindmap" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M640 138.666667c-53.717333 0-98.986667 36.096-112.896 85.333333H469.333333A160 160 0 0 0 309.333333 384v10.666667H256a117.333333 117.333333 0 1 0 0 234.666666h53.333333V640A160 160 0 0 0 469.333333 800h57.770667a117.376 117.376 0 0 0 112.896 85.333333h128a117.333333 117.333333 0 1 0 0-234.666666h-128c-53.717333 0-98.986667 36.096-112.896 85.333333H469.333333A96 96 0 0 1 373.333333 640v-10.666667H384a117.333333 117.333333 0 1 0 0-234.666666h-10.666667V384A96 96 0 0 1 469.333333 288h57.770667a117.376 117.376 0 0 0 112.896 85.333333h128a117.333333 117.333333 0 1 0 0-234.666666h-128zM586.666667 256c0-29.44 23.893333-53.333333 53.333333-53.333333h128a53.333333 53.333333 0 1 1 0 106.666666h-128c-29.44 0-53.333333-23.893333-53.333333-53.333333z m-384 256c0-29.44 23.893333-53.333333 53.333333-53.333333h128a53.333333 53.333333 0 1 1 0 106.666666H256c-29.44 0-53.333333-23.893333-53.333333-53.333333z m384 256c0-29.44 23.893333-53.333333 53.333333-53.333333h128a53.333333 53.333333 0 1 1 0 106.666666h-128c-29.44 0-53.333333-23.893333-53.333333-53.333333z" fill="currentColor"></path></symbol>`);
 
     this.initMetaInfo();
-    this.initSetting();
+    await this.initSetting();
+    if (this._unloading) return;
 
     this._mutationObserver = this.setAddImageBlockMuatationObserver(document.body, (blockElement: HTMLElement) => {
       if (this.data[STORAGE_NAME].labelDisplay === "noLabel") return;
 
-      const imageElement = blockElement.querySelector("img") as HTMLImageElement;
-      if (imageElement) {
-        if (blockElement.hasAttribute('custom-mindmap') || blockElement.hasAttribute('custom-mindmap-image')) {
-          const imageURL = imageElement.getAttribute("data-src");
-          this.getMindmapImageInfo(imageURL, false).then((imageInfo) => {
-            this.updateAttrLabel(imageInfo, blockElement);
-          });
-        }
+      // 标签是固定文字，无需下载图片或解码 PNG/SVG 元数据。
+      const imageElement = blockElement.querySelector(MINDMAP_IMAGE_SELECTOR);
+      const imageURL = imageElement?.getAttribute("data-src");
+      if (imageURL && /^assets\/.+\.(?:svg|png)$/.test(imageURL)) {
+        this.updateAttrLabel(blockElement);
       }
     });
 
     // Add edit button on hover for mindmap images
-    let isProcessing = false;
-    this._mouseoverHandler = (e) => {
-      const imgContainer = (e.target as HTMLElement).closest('[data-type="img"]') as HTMLElement;
-      if (!imgContainer || isProcessing) return;
+    this._mouseoverHandler = (e: MouseEvent) => {
+      if (!(e.target instanceof Element)) return;
+      const imgContainer = e.target.closest('[data-type="img"]') as HTMLElement;
+      if (!imgContainer) return;
+      // 在同一张图片的子元素间移动鼠标，不重复查询和创建按钮。
+      if (e.relatedTarget instanceof Node && imgContainer.contains(e.relatedTarget)) return;
+
+      const action = imgContainer.querySelector('.protyle-action') as HTMLElement;
+      if (!action || action.querySelector('.cst-edit-mindmap')) return;
 
       // Check if this image has custom-mindmap attribute
       const blockElement = imgContainer.closest("div[data-type='NodeParagraph']") as HTMLElement;
       if (!blockElement) return;
       if (!blockElement.hasAttribute('custom-mindmap') && !blockElement.hasAttribute('custom-mindmap-image')) return;
-
-      isProcessing = true;
-      setTimeout(() => isProcessing = false, 100);
-
-      const action = imgContainer.querySelector('.protyle-action') as HTMLElement;
-      if (!action) return;
-
-      // Check if edit button already exists
-      if (action.querySelector('.cst-edit-mindmap')) return;
-
-      const imgElement = imgContainer.querySelector('img');
-      const imgSrc = imgElement?.getAttribute("data-src");
-      const blockID = blockElement.getAttribute("data-node-id");
 
       // Create edit button element
       const editBtnElement = HTMLToElement(`<span aria-label="编辑思维导图" data-position="4north" class="ariaLabel protyle-icon cst-edit-mindmap"><svg><use xlink:href="#iconSimpleMindmap"></use></svg></span>`);
@@ -125,6 +122,9 @@ export default class MindmapPlugin extends Plugin {
         event.preventDefault();
         event.stopPropagation();
 
+        // 点击时读取最新地址，避免图片替换后仍然编辑旧文件。
+        const imgSrc = imgContainer.querySelector('img')?.getAttribute("data-src");
+        const blockID = blockElement.getAttribute("data-node-id");
         if (imgSrc && blockID) {
           this.getMindmapImageInfo(imgSrc, true).then((imageInfo: MindmapImageInfo) => {
             if (imageInfo) {
@@ -141,20 +141,7 @@ export default class MindmapPlugin extends Plugin {
       // Insert button and adjust styles
       action.insertAdjacentElement('afterbegin', editBtnElement);
 
-      // Reset all button styles
-      for (const child of action.children) {
-        child.classList.toggle('protyle-icon--only', false);
-        child.classList.toggle('protyle-icon--first', false);
-        child.classList.toggle('protyle-icon--last', false);
-      }
-
-      // Apply appropriate styles based on button count
-      if (action.children.length == 1) {
-        action.firstElementChild.classList.toggle('protyle-icon--only', true);
-      } else if (action.children.length > 1) {
-        action.firstElementChild.classList.toggle('protyle-icon--first', true);
-        action.lastElementChild.classList.toggle('protyle-icon--last', true);
-      }
+      this.updateImageActionStyles(action);
     };
     document.addEventListener('mouseover', this._mouseoverHandler);
 
@@ -191,10 +178,15 @@ export default class MindmapPlugin extends Plugin {
     this._globalKeyDownHandler = this.globalKeyDownHandler.bind(this);
     document.documentElement.addEventListener("keydown", this._globalKeyDownHandler);
 
-    this.reloadAllEditor();
+    document.querySelectorAll<HTMLElement>(MINDMAP_BLOCK_SELECTOR).forEach(blockElement => {
+      if (blockElement.querySelector(MINDMAP_IMAGE_SELECTOR)) {
+        this.updateAttrLabel(blockElement);
+      }
+    });
   }
 
   onunload() {
+    this._unloading = true;
     if (this._mutationObserver) this._mutationObserver.disconnect();
     if (this._openMenuImageHandler) this.eventBus.off("open-menu-image", this._openMenuImageHandler);
     if (this._openMenuDoctreeHandler) this.eventBus.off("open-menu-doctree", this._openMenuDoctreeHandler);
@@ -202,7 +194,14 @@ export default class MindmapPlugin extends Plugin {
     if (this._clickBlockIconHandler) this.eventBus.off('click-blockicon', this._clickBlockIconHandler);
     if (this._globalKeyDownHandler) document.documentElement.removeEventListener("keydown", this._globalKeyDownHandler);
     if (this._mouseoverHandler) document.removeEventListener('mouseover', this._mouseoverHandler);
-    this.reloadAllEditor();
+    for (const dialog of this._mindmapDialogs) dialog.destroy();
+    this._mindmapDialogs.clear();
+    document.querySelectorAll('.label--embed-mindmap').forEach(label => label.remove());
+    document.querySelectorAll('.cst-edit-mindmap').forEach(button => {
+      const action = button.parentElement;
+      button.remove();
+      if (action) this.updateImageActionStyles(action);
+    });
     this.removeAllMindmapTab();
   }
 
@@ -278,31 +277,43 @@ export default class MindmapPlugin extends Plugin {
 
   public setAddImageBlockMuatationObserver(element: HTMLElement, callback: (blockElement: HTMLElement) => void): MutationObserver {
     const mutationObserver = new MutationObserver(mutations => {
+      const addedRoots = new Set<Element>();
+      const blocks = new Set<HTMLElement>();
       for (const mutation of mutations) {
+        // 图片或属性栏也可能单独插入已存在的段落。
+        const target = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
+        const parentBlock = target?.closest<HTMLElement>(MINDMAP_BLOCK_SELECTOR);
+        if (parentBlock) blocks.add(parentBlock);
+
         if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach(node => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const addedElement = node as HTMLElement;
-              if (addedElement.matches("div[data-type='NodeParagraph']")) {
-                if (addedElement.querySelector(".img[data-type='img'] img")) {
-                  callback(addedElement as HTMLElement);
-                }
-              } else {
-                addedElement.querySelectorAll("div[data-type='NodeParagraph']").forEach((blockElement: HTMLElement) => {
-                  if (blockElement.querySelector(".img[data-type='img'] img")) {
-                    callback(blockElement);
-                  }
-                })
-              }
-            }
-          });
+          for (const node of mutation.addedNodes) {
+            if (node instanceof Element) addedRoots.add(node);
+          }
+        }
+      }
+
+      for (const root of addedRoots) {
+        if (!root.isConnected) continue;
+        // 父节点已经在本批次中时，只扫描父节点一次。
+        let parent = root.parentElement;
+        while (parent && !addedRoots.has(parent)) parent = parent.parentElement;
+        if (parent) continue;
+        if (root.matches(MINDMAP_BLOCK_SELECTOR)) blocks.add(root as HTMLElement);
+        root.querySelectorAll<HTMLElement>(MINDMAP_BLOCK_SELECTOR).forEach(block => blocks.add(block));
+      }
+
+      for (const block of blocks) {
+        if (block.isConnected && element.contains(block) && block.querySelector(MINDMAP_IMAGE_SELECTOR)) {
+          callback(block);
         }
       }
     });
 
     mutationObserver.observe(element, {
       childList: true,
-      subtree: true
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['custom-mindmap', 'custom-mindmap-image', 'data-src']
     });
 
     return mutationObserver;
@@ -494,10 +505,21 @@ export default class MindmapPlugin extends Plugin {
   }
 
   public async getMindmapImage(imageURL: string, reload: boolean): Promise<string> {
-    const response = await fetch(imageURL, { cache: reload ? 'reload' : 'default' });
-    if (!response.ok) return "";
-    const blob = await response.blob();
-    return await blobToDataURL(blob);
+    const key = `${reload ? 'reload' : 'default'}:${imageURL}`;
+    const pending = this._pendingImageRequests.get(key);
+    if (pending) return pending;
+
+    const request = (async () => {
+      const response = await fetch(imageURL, { cache: reload ? 'reload' : 'default' });
+      if (!response.ok) return "";
+      return blobToDataURL(await response.blob());
+    })();
+    this._pendingImageRequests.set(key, request);
+    try {
+      return await request;
+    } finally {
+      this._pendingImageRequests.delete(key);
+    }
   }
 
   public async updateMindmapImage(imageInfo: MindmapImageInfo, callback?: (response: IWebSocketData) => void) {
@@ -514,27 +536,44 @@ export default class MindmapPlugin extends Plugin {
     if (callback) callback(resp);
   }
 
-  public updateAttrLabel(imageInfo: MindmapImageInfo, blockElement: HTMLElement) {
-    if (!imageInfo) return;
-
+  public updateAttrLabel(blockElement: HTMLElement) {
     if (this.data[STORAGE_NAME].labelDisplay === "noLabel") return;
 
     const attrElement = blockElement.querySelector(".protyle-attr") as HTMLDivElement;
     if (attrElement) {
-      const pageCount = (base64ToUnicode(imageInfo.data.split(',').pop()).match(/name(?:=&quot;|%3D%22)/g) || []).length;
-      const labelHTML = `<span>SimpleMindMap</span>`;
       let labelElement = attrElement.querySelector(".label--embed-mindmap") as HTMLDivElement;
-      if (labelElement) {
-        labelElement.innerHTML = labelHTML;
-      } else {
+      if (!labelElement) {
         labelElement = document.createElement("div");
         labelElement.classList.add("label--embed-mindmap");
-        if (this.data[STORAGE_NAME].labelDisplay === "showLabelAlways") {
-          labelElement.classList.add("label--embed-mindmap--always");
-        }
-        labelElement.innerHTML = labelHTML;
+        labelElement.innerHTML = '<span>SimpleMindMap</span>';
         attrElement.prepend(labelElement);
       }
+      labelElement.classList.toggle('label--embed-mindmap--always',
+        this.data[STORAGE_NAME].labelDisplay === "showLabelAlways");
+    }
+  }
+
+  private updateImageActionStyles(action: HTMLElement) {
+    const count = action.children.length;
+    for (const child of action.children) {
+      child.classList.toggle('protyle-icon--only', count === 1);
+      child.classList.toggle('protyle-icon--first', count > 1 && child === action.firstElementChild);
+      child.classList.toggle('protyle-icon--last', count > 1 && child === action.lastElementChild);
+    }
+  }
+
+  private async saveMindmapConfig(blockID: string, config: any) {
+    if (!blockID || !config) return;
+    const { rainbowLinesConfig, ...otherConfig } = config;
+    const attrs: Record<string, string> = {};
+    if (Object.keys(otherConfig).length > 0) {
+      attrs['custom-mindmap-setting'] = JSON.stringify(otherConfig);
+    }
+    if (rainbowLinesConfig) {
+      attrs['custom-mindmap-rainbowLinesConfig'] = JSON.stringify(rainbowLinesConfig);
+    }
+    if (Object.keys(attrs).length > 0) {
+      await fetchSyncPost('/api/attr/setBlockAttrs', { id: blockID, attrs });
     }
   }
 
@@ -1172,12 +1211,18 @@ export default class MindmapPlugin extends Plugin {
       }
     }
 
+    let removeMessageListener = () => {};
     const dialog = new Dialog({
       title: dialogTitle,
       content: dialogHTML,
       width: this.isMobile ? "92vw" : "90vw",
       height: "80vh",
+      destroyCallback: () => {
+        removeMessageListener();
+        this._mindmapDialogs.delete(dialog);
+      },
     });
+    this._mindmapDialogs.add(dialog);
 
     // 等待 iframe 加载完成
     const iframe = dialog.element.querySelector(`#${iframeId}`) as HTMLIFrameElement;
@@ -1195,6 +1240,7 @@ export default class MindmapPlugin extends Plugin {
 
     // 监听 iframe 的消息
     const messageHandler = (event: MessageEvent) => {
+      if (event.source !== iframe.contentWindow || typeof event.data !== 'string') return;
       try {
         const message = JSON.parse(event.data);
 
@@ -1286,11 +1332,8 @@ export default class MindmapPlugin extends Plugin {
 
     window.addEventListener('message', messageHandler);
 
-    // 对话框销毁时移除监听
-    const originalDestroy = dialog.destroy.bind(dialog);
-    dialog.destroy = () => {
+    removeMessageListener = () => {
       window.removeEventListener('message', messageHandler);
-      originalDestroy();
     };
   }
 
@@ -1579,28 +1622,8 @@ export default class MindmapPlugin extends Plugin {
         }
 
         const onSaveConfig = async (message: any) => {
-          // 保存思维导图配置，将彩虹线条配置分离保存
           try {
-            const config = message.config || null;
-            if (imageInfo.blockID && config) {
-              const { rainbowLinesConfig, ...otherConfig } = config;
-
-              // 保存非彩虹线条配置到 custom-mindmap-setting
-              if (Object.keys(otherConfig).length > 0) {
-                await fetchSyncPost('/api/attr/setBlockAttrs', {
-                  id: imageInfo.blockID,
-                  attrs: { 'custom-mindmap-setting': JSON.stringify(otherConfig) }
-                });
-              }
-
-              // 保存彩虹线条配置到 custom-mindmap-rainbowLinesConfig
-              if (rainbowLinesConfig) {
-                await fetchSyncPost('/api/attr/setBlockAttrs', {
-                  id: imageInfo.blockID,
-                  attrs: { 'custom-mindmap-rainbowLinesConfig': JSON.stringify(rainbowLinesConfig) }
-                });
-              }
-            }
+            await that.saveMindmapConfig(imageInfo.blockID, message.config);
           } catch (err) {
             console.error('Save config error:', err);
           }
@@ -1624,7 +1647,7 @@ export default class MindmapPlugin extends Plugin {
               (imageElement as HTMLImageElement).src = imageInfo.imageURL;
               const blockElement = imageElement.closest("div[data-type='NodeParagraph']") as HTMLElement;
               if (blockElement) {
-                that.updateAttrLabel(imageInfo, blockElement);
+                that.updateAttrLabel(blockElement);
               }
             });
 
@@ -1653,8 +1676,8 @@ export default class MindmapPlugin extends Plugin {
           }
         }
 
-        const messageEventHandler = (event) => {
-          if (!((event.source.location.href as string).includes(`iframeID=${iframeID}`))) return;
+        const messageEventHandler = (event: MessageEvent) => {
+          if (event.source !== iframe.contentWindow || typeof event.data !== 'string') return;
           if (event.data) {
             try {
               const message = JSON.parse(event.data);
@@ -1747,6 +1770,7 @@ export default class MindmapPlugin extends Plugin {
         };
 
         const messageEventHandler = (event: MessageEvent) => {
+          if (event.source !== iframe.contentWindow || typeof event.data !== 'string') return;
           try {
             const message = JSON.parse(event.data);
             if (!message) return;
@@ -1898,12 +1922,14 @@ export default class MindmapPlugin extends Plugin {
       hideCloseIcon: this.isMobile,
       destroyCallback: () => {
         // 如果是通过"在标签页中打开"按钮关闭，不触发保存（会在 Tab 中继续编辑）
-        if (!openingInTab) {
+        if (!openingInTab && !this._unloading) {
           triggerSaveOnClose();
         }
         dialogDestroyCallbacks.forEach(callback => callback());
+        this._mindmapDialogs.delete(dialog);
       },
     });
+    this._mindmapDialogs.add(dialog);
 
     // 绑定"在标签页中打开"按钮事件
     const openInTabBtn = dialog.element.querySelector(".open-in-tab-btn");
@@ -2106,28 +2132,8 @@ export default class MindmapPlugin extends Plugin {
     }
 
     const onSaveConfig = async (message: any) => {
-      // 保存思维导图配置，将彩虹线条配置分离保存
       try {
-        const config = message.config || null;
-        if (imageInfo.blockID && config) {
-          const { rainbowLinesConfig, ...otherConfig } = config;
-
-          // 保存非彩虹线条配置到 custom-mindmap-setting
-          if (Object.keys(otherConfig).length > 0) {
-            await fetchSyncPost('/api/attr/setBlockAttrs', {
-              id: imageInfo.blockID,
-              attrs: { 'custom-mindmap-setting': JSON.stringify(otherConfig) }
-            });
-          }
-
-          // 保存彩虹线条配置到 custom-mindmap-rainbowLinesConfig
-          if (rainbowLinesConfig) {
-            await fetchSyncPost('/api/attr/setBlockAttrs', {
-              id: imageInfo.blockID,
-              attrs: { 'custom-mindmap-rainbowLinesConfig': JSON.stringify(rainbowLinesConfig) }
-            });
-          }
-        }
+        await this.saveMindmapConfig(imageInfo.blockID, message.config);
       } catch (err) {
         console.error('Save config error:', err);
       }
@@ -2151,7 +2157,7 @@ export default class MindmapPlugin extends Plugin {
           (imageElement as HTMLImageElement).src = imageInfo.imageURL;
           const blockElement = imageElement.closest("div[data-type='NodeParagraph']") as HTMLElement;
           if (blockElement) {
-            this.updateAttrLabel(imageInfo, blockElement);
+            this.updateAttrLabel(blockElement);
           }
         });
       } catch (err) {
@@ -2179,8 +2185,8 @@ export default class MindmapPlugin extends Plugin {
       }
     }
 
-    const messageEventHandler = (event) => {
-      if (!((event.source.location.href as string).includes(`iframeID=${iframeID}`))) return;
+    const messageEventHandler = (event: MessageEvent) => {
+      if (event.source !== iframe.contentWindow || typeof event.data !== 'string') return;
       if (event.data) {
         try {
           const message = JSON.parse(event.data);
@@ -2245,7 +2251,7 @@ export default class MindmapPlugin extends Plugin {
 
   public removeAllMindmapTab() {
     getAllModels().custom.forEach((custom: any) => {
-      if (custom.type == this.name + this.EDIT_TAB_TYPE) {
+      if (custom.type == this.name + this.EDIT_TAB_TYPE || custom.type == this.name + this.TEMP_TAB_TYPE) {
         custom.tab?.close();
       }
     })
