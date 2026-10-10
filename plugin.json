@@ -2,7 +2,7 @@
   "name": "siyuan-plugin-simplemindmap",
   "author": "Achuan-2",
   "url": "https://github.com/Achuan-2/siyuan-plugin-simplemindmap",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "minAppVersion": "3.0.0",
   "disabledInPublish": true,
   "backends": [
@@ -24,7 +24,10 @@
     "zh_CN": "README.md"
   },
   "funding": {
-    "custom": []
+    "custom": [
+              "https://pancake.waffo.ai/store/achuan-2-fdbho4ye/product/PROD_3F7Aa7c2NQlz9KmxcgxjQ7?type=onetime&currency=USD",
+              "https://fastly.jsdelivr.net/gh/Achuan-2/PicBed/assets/20241128221208-2024-11-28.png"
+    ]
   },
   "keywords": []
 }

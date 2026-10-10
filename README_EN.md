@@ -139,14 +139,8 @@ cd ../.. && npm run build
   - Support chemical formula rendering.
 - Referenced [YuxinZhaozyx](https://github.com/YuxinZhaozyx/siyuan-embed-excalidraw) embedded series plugin design.
 
-## 6 ❤️ Powered by Love
+## ❤️ Tips Are Welcome
 
-If you like my plugin, welcome to star the GitHub repo and WeChat appreciation, this will motivate me to continue improving this plugin and develop new plugins.
+If you find this plugin useful, you're welcome to leave a tip or give the repository a star on GitHub. Your support helps me maintain and improve this plugin and develop new ones. Thank you for your support!
 
-Maintaining plugins takes time and effort, personal time and energy are limited, open source is just sharing, not that I have to waste my time to help users implement features they need for free.
-
-Features I need I will slowly improve (donations can urge updates), some features I think can be improved but not necessary at this stage need donations to improve (will mark donation label and required amount), and unnecessary features, troublesome to implement features will directly close issue without consideration, features I haven't implemented welcome big shots to PR.
-
-Friends who have accumulated 50 yuan in donations, if you want to add my WeChat, you can note WeChat number when donating, or email achuan-2@outlook.com to apply for friend.
-
-<img alt="image" src="https://fastly.jsdelivr.net/gh/Achuan-2/PicBed@pic/assets/network-asset-network-asset-image-20250614123558-fuhir5v.png" />
+[Leave a tip](https://pancake.waffo.ai/store/achuan-2-fdbho4ye/product/PROD_3F7Aa7c2NQlz9KmxcgxjQ7?type=onetime&currency=USD)
